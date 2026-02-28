@@ -17,6 +17,28 @@ def get_file_md5(file_path):
         return None
 
 
+def resize_maintain_aspect(frame, short_side_target=200):
+    """
+    Resizes a frame so the shortest side matches short_side_target,
+    maintaining the original aspect ratio.
+    """
+    h, w = frame.shape[:2]
+
+    # Determine which side is the shortest
+    if h < w:
+        # Landscape or Square: height is the shortest
+        ratio = short_side_target / float(h)
+        new_dim = (int(w * ratio), short_side_target)
+    else:
+        # Portrait: width is the shortest
+        ratio = short_side_target / float(w)
+        new_dim = (short_side_target, int(h * ratio))
+
+    # Perform the actual resize
+    resized_frame = cv2.resize(frame, new_dim, interpolation=cv2.INTER_AREA)
+    return resized_frame
+
+
 def process_video(absolute_video_path, output_folder):
     """Processes a single video file."""
     cap = cv2.VideoCapture(absolute_video_path)
@@ -53,8 +75,10 @@ def process_video(absolute_video_path, output_folder):
         if current_frame_idx % capture_step == 0:
             saved_count += 1
             filename = f"{file_hash}-{saved_count:04d}.png"  # noqa
+            processed_frame = resize_maintain_aspect(
+                frame, short_side_target=200)
             save_path = os.path.join(output_folder, filename)
-            cv2.imwrite(save_path, frame)
+            cv2.imwrite(save_path, processed_frame)
 
         current_frame_idx += 1
 
