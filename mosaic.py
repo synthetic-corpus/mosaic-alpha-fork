@@ -56,9 +56,6 @@ class TileProcessor:
         # search the tiles directory recursively
         for root, subFolders, files in os.walk(self.tiles_directory):
             for tile_name in files:
-                print(
-                     'Reading {:40.40}'.format(tile_name),
-                     flush=True, end='\r')
                 tile_path = os.path.join(root, tile_name)
                 large_tile, small_tile = self.__process_tile(tile_path)
                 if large_tile:
@@ -260,7 +257,7 @@ def compose(original_img, tiles):
                     (list(original_img_small.crop(small_box).getdata()),
                      large_box)
                     )
-                progress.update()
+            progress.update()  # process updates on every x completion.
 
     except KeyboardInterrupt:
         print('\nHalting, saving partial image please wait...')
