@@ -1,0 +1,69 @@
+name: PEP 8 Compliance Check
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - '**'  # Run on pushes to any branch
+
+jobs:
+  pep8_check:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # IMPORTANT: Fetch all history for git diff to work correctly
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x' # Specify your Python version (e.g., '3.9', '3.10', '3.11')
+
+    - name: Install flake8
+      run: pip install flake8
+
+    - name: Get changed Python files
+      id: changed-files
+      run: |
+        # For push events, compare with the previous commit
+        # Handle cases where commits might not exist or be accessible
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          # Manual trigger - check all Python files
+          CHANGED_PYTHON_FILES=$(find . -name "*.py" -type f | tr '\n' ' ')
+        elif [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
+          # First commit - check all Python files
+          CHANGED_PYTHON_FILES=$(find . -name "*.py" -type f | tr '\n' ' ')
+        else
+          # Try git diff, fallback to all files if it fails
+          CHANGED_PYTHON_FILES=$(git diff --name-only --diff-filter=ACM ${{ github.event.before }} ${{ github.sha }} 2>/dev/null | grep '\.py$' | tr '\n' ' ' || find . -name "*.py" -type f | tr '\n' ' ')
+        fi
+        
+        # Ensure we have a value even if empty
+        if [ -z "$CHANGED_PYTHON_FILES" ]; then
+          CHANGED_PYTHON_FILES=""
+        fi
+        
+        echo "changed_python_files=${CHANGED_PYTHON_FILES}" >> $GITHUB_OUTPUT
+        echo "Event type: ${{ github.event_name }}"
+        echo "Before commit: ${{ github.event.before }}"
+        echo "Current commit: ${{ github.sha }}"
+        echo "Found Python files: '$CHANGED_PYTHON_FILES'"
+      shell: bash
+
+    - name: Run flake8 on changed Python files
+      if: success() && steps.changed-files.outputs.changed_python_files
+      run: |
+        echo "Checking the following files for PEP 8 compliance:"
+        echo "${{ steps.changed-files.outputs.changed_python_files }}"
+        echo ""
+        # Use xargs to properly handle multiple files
+        echo "${{ steps.changed-files.outputs.changed_python_files }}" | xargs flake8
+      shell: bash
+
+    - name: Report success if no Python files were changed (Optional, for clarity)
+      # This step only runs if the 'Run flake8' step was skipped due to no Python files being found.
+      # It provides a clear message in the GitHub Actions UI.
+      if: success() && !steps.changed-files.outputs.changed_python_files
+      run: echo "No .py files changed in this push. PEP 8 compliance check passed (skipped)."
