@@ -44,10 +44,6 @@ def main():
         print("ERROR: Environment variable 'S3_STORAGE' is not set.")
         sys.exit(1)
 
-    # noqa if not is_mounted("/"):
-    # noqa   print(f"ERROR: EBS volume is not mounted at {mount_point}")
-    # noqa   sys.exit(1)
-
     s3 = S3Access(bucket_name)
 
     # --- Logic for Videos (Download) ---
@@ -69,7 +65,7 @@ def main():
         os.makedirs(local_photos_dir, exist_ok=True)
 
         print(f"Downloading photos to {local_photos_dir}...")
-        keys = s3.list_sources("moasic-art-photos")
+        keys = s3.list_sources("mosaic-art-photos")
         valid_extensions = ('.png', '.jpeg', '.jpg')
 
         for key in keys:
