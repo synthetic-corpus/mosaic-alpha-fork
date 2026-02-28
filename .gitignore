@@ -218,3 +218,6 @@ crash.*.log
 .venv
 __pycache__
 secrets.txt
+test-media/
+test-results/
+logs/
