@@ -50,7 +50,8 @@ class TileProcessor:
     def get_tiles(self):
         large_tiles = []
         small_tiles = []
-
+        count = 0
+        exp_threshold = 1  # for logging
         print('Reading tiles from {}...'.format(self.tiles_directory))
 
         # search the tiles directory recursively
@@ -61,6 +62,10 @@ class TileProcessor:
                 if large_tile:
                     large_tiles.append(large_tile)
                     small_tiles.append(small_tile)
+                count += 1
+                if count == exp_threshold:
+                    print(f'Processed {count} file(s) so far...')
+                    exp_threshold = exp_threshold * 2
 
         print('Processed {} tiles.'.format(len(large_tiles)))
 

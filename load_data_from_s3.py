@@ -1,12 +1,26 @@
 import os
 import argparse
 import sys
+from PIL import Image
 from s3_access import S3Access
 
 
-def is_mounted(path):
-    """Check if the specific path is a mounted volume."""
-    return os.path.ismount(path)
+def resize_in_place(file_path, max_dimension=600):
+    """
+    Opens an image, resizes it to fit within max_dimension
+    (maintaining aspect ratio), and overwrites the original file.
+    """
+    try:
+        with Image.open(file_path) as img:
+            # .thumbnail handles aspect ratio automatically
+            # It only shrinks if the image is larger than 600px
+            img.thumbnail((max_dimension, max_dimension),
+                          Image.Resampling.LANCZOS)
+            img.save(file_path)
+            return True
+    except Exception as e:
+        print(f"Error resizing {file_path}: {e}")
+        return False
 
 
 def main():
@@ -70,9 +84,12 @@ def main():
 
         for key in keys:
             if key.lower().endswith(valid_extensions):
+                # downloads source files from s3
+                # ensures they are never larger 600 on longer side
                 filename = os.path.basename(key)
                 s3.download_to_disk(
                     key, os.path.join(local_photos_dir, filename))
+                resize_in_place(os.path.join(local_photos_dir, filename))
 
     # --- Logic for Results (Upload) ---
     if args.upload_results:
