@@ -1,5 +1,7 @@
 import sys
 import os
+import io
+import hashlib
 import os.path
 from PIL import Image, ImageOps
 from multiprocessing import Process, Queue, cpu_count
@@ -166,8 +168,32 @@ class MosaicImage:
         img.putdata(tile_data)
         self.image.paste(img, coords)
 
-    def save(self, path):
-        self.image.save(path)
+    def save(self):
+        """
+        Saves the image_obj as a .jpeg to /mnt/ebs/mosaics
+        using its MD5 hash as the filename.
+        """
+        output_dir = "/mnt/ebs/mosaics"
+
+        # Ensure the output directory exists
+        os.makedirs(output_dir, exist_ok=True)
+
+        # 1. Convert image to bytes to calculate hash
+        # We save to a temporary buffer or use the raw data
+        img_byte_arr = io.BytesIO()
+        self.image.save(img_byte_arr, format='JPEG')
+        img_bytes = img_byte_arr.getvalue()
+
+        md5_hash = hashlib.md5(img_bytes).hexdigest()
+
+        filename = f"{md5_hash}.jpeg"
+        final_path = os.path.join(output_dir, filename)
+
+        with open(final_path, "wb") as f:
+            f.write(img_bytes)
+
+        print(f"Mosaic saved to: {final_path}")
+        return final_path
 
 
 def build_mosaic(result_queue, all_tile_data_large, original_img_large):
@@ -189,8 +215,8 @@ def build_mosaic(result_queue, all_tile_data_large, original_img_large):
         except KeyboardInterrupt:
             pass
 
-    mosaic.save(OUT_FILE)
-    print('\nFinished, output is in', OUT_FILE)
+    OUT_FILEPATH = mosaic.save()
+    print('\nFinished, output is in', OUT_FILEPATH)
 
 
 def compose(original_img, tiles):
