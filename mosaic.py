@@ -10,6 +10,7 @@ from multiprocessing import Process, Queue, cpu_count
 TILE_SIZE = 50     # height/width of mosaic tiles in pixels
 TILE_MATCH_RES = 5      # tile matching resolution
 ENLARGEMENT = 8      # mosaic image will be this many times larger
+Image.MAX_IMAGE_PIXELS = None  # Dangerous, but allow it for now
 
 TILE_BLOCK_SIZE = TILE_SIZE / max(min(TILE_MATCH_RES, TILE_SIZE), 1)
 WORKER_COUNT = max(cpu_count() - 1, 1)
