@@ -6,7 +6,7 @@ from botocore.exceptions import ClientError
 class S3Access:
     """S3 access class for managing S3 bucket operations."""
 
-    def __init__(self, bucket_name):
+    def __init__(self, bucket_name: str):
         """
         Initialize S3Access with a bucket name.
 
@@ -16,7 +16,7 @@ class S3Access:
         self.bucket_name = bucket_name
         self.s3_client = boto3.client('s3')
 
-    def list_sources(self):
+    def list_sources(self, s3folder: str):
         """
         List all objects in the sources folder of the S3 bucket.
 
@@ -27,7 +27,7 @@ class S3Access:
             # List objects with prefix 'sources/'
             response = self.s3_client.list_objects_v2(
                 Bucket=self.bucket_name,
-                Prefix='sources/'
+                Prefix=s3folder
             )
 
             # Extract object keys from the response
