@@ -94,8 +94,7 @@ def main():
                          a folder to process recursively.")
 
     args = parser.parse_args()
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    output_folder = os.path.join(script_dir, "frames")
+    output_folder = os.path.join('/mnt/ebs/', "frames")
 
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
