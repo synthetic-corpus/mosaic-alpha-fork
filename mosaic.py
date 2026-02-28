@@ -236,4 +236,4 @@ if __name__ == '__main__':
 		else:
 			mosaic(source_image, tile_dir)
 
-# this is not pep8 valid
+# this is not pep8 valid very not valid
