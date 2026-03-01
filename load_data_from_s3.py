@@ -12,6 +12,9 @@ def resize_in_place(file_path, max_dimension=600):
     """
     try:
         with Image.open(file_path) as img:
+            if img.mode != 'RGB':
+                # Enforces RGB for uniformity
+                img = img.convert('RGB')
             # .thumbnail handles aspect ratio automatically
             # It only shrinks if the image is larger than 600px
             img.thumbnail((max_dimension, max_dimension),

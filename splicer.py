@@ -2,59 +2,62 @@ import cv2
 import os
 import hashlib
 import argparse
-import sys  # noqa F401 to be used later
+from multiprocessing import Pool, cpu_count
+from functools import partial
+
+WORKER_COUNT = cpu_count()
+
+
+def is_video_readable(v_path):
+    """ Verifies if a file is not corrupted """
+    cap = cv2.VideoCapture(v_path)
+    if not cap.isOpened():
+        return False
+
+    # Try to grab just the first frame to see if the decoder barfs
+    ret, frame = cap.read()
+    cap.release()
+
+    return ret and frame is not None
 
 
 def get_file_md5(file_path):
-    """Generates an MD5 hash of the video file in chunks."""
     hash_md5 = hashlib.md5()
     try:
         with open(file_path, "rb") as f:
             for chunk in iter(lambda: f.read(4096), b""):
                 hash_md5.update(chunk)
         return hash_md5.hexdigest()
-    except FileNotFoundError:
+    except Exception:
         return None
 
 
 def resize_maintain_aspect(frame, short_side_target=200):
-    """
-    Resizes a frame so the shortest side matches short_side_target,
-    maintaining the original aspect ratio.
-    """
     h, w = frame.shape[:2]
-
-    # Determine which side is the shortest
     if h < w:
-        # Landscape or Square: height is the shortest
         ratio = short_side_target / float(h)
         new_dim = (int(w * ratio), short_side_target)
     else:
-        # Portrait: width is the shortest
         ratio = short_side_target / float(w)
         new_dim = (short_side_target, int(h * ratio))
-
-    # Perform the actual resize
-    resized_frame = cv2.resize(frame, new_dim, interpolation=cv2.INTER_AREA)
-    return resized_frame
+    return cv2.resize(frame, new_dim, interpolation=cv2.INTER_AREA)
 
 
-def process_video(absolute_video_path, output_folder):
-    """Processes a single video file."""
+def process_video_worker(absolute_video_path, output_folder):
+    """The function each CPU core will run."""
+    if not is_video_readable(absolute_video_path):
+        return f"Error: {os.path.basename(absolute_video_path)}\
+                is not readable!"
     cap = cv2.VideoCapture(absolute_video_path)
     if not cap.isOpened():
-        print(f"  [!] Error: Could not open \
-               '{os.path.basename(absolute_video_path)}'. Skipping.")
-        return
+        return f"Error: {os.path.basename(absolute_video_path)}"
 
     fps = cap.get(cv2.CAP_PROP_FPS)
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
     if fps <= 0:
-        print(f"  [!] Error: Could not determine FPS for \
-               '{os.path.basename(absolute_video_path)}'. Skipping.")
         cap.release()
-        return
+        return f"Bad FPS: {os.path.basename(absolute_video_path)}"
 
     duration_seconds = total_frames / fps
     interval_seconds = 1 if duration_seconds < 60 else 5
@@ -64,9 +67,6 @@ def process_video(absolute_video_path, output_folder):
     saved_count = 0
     current_frame_idx = 0
 
-    print(f"  Processing: \
-           {os.path.basename(absolute_video_path)} ({duration_seconds:.1f}s)")  # noqa
-
     while True:
         ret, frame = cap.read()
         if not ret:
@@ -74,64 +74,59 @@ def process_video(absolute_video_path, output_folder):
 
         if current_frame_idx % capture_step == 0:
             saved_count += 1
-            filename = f"{file_hash}-{saved_count:04d}.png"  # noqa
-            processed_frame = resize_maintain_aspect(
-                frame, short_side_target=200)
+            filename = f"{file_hash}-{saved_count:04d}.png"
+            processed_frame = resize_maintain_aspect(frame,
+                                                     short_side_target=200)
             save_path = os.path.join(output_folder, filename)
             cv2.imwrite(save_path, processed_frame)
 
         current_frame_idx += 1
 
     cap.release()
-    print(f"  Done. Saved {saved_count} frames.")
+    return f"Done: {os.path.basename(absolute_video_path)} \
+             ({saved_count} frames)"
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Extract frames from videos based on length.")
-    parser.add_argument("-path", help="Path to a single video file.")
-    parser.add_argument("-folder", help="Path to \
-                         a folder to process recursively.")
-
+        description="Multi-threaded Frame Extraction")
+    parser.add_argument("-path",
+                        help="Path to a single video file.")
+    parser.add_argument("-folder",
+                        help="Path to folder for recursive processing.")
     args = parser.parse_args()
-    output_folder = os.path.join('/mnt/ebs/', "frames")
 
+    output_folder = os.path.join('/mnt/ebs/', "frames")
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
-    # List to hold all files to be processed
     video_files = []
-
-    # Handle single file mode
     if args.path:
-        abs_path = os.path.abspath(args.path)
-        if os.path.isfile(abs_path):
-            video_files.append(abs_path)
-        else:
-            print(f"Error: Single file '{abs_path}' not found.")
-
-    # Handle recursive folder mode
+        video_files.append(os.path.abspath(args.path))
     if args.folder:
         abs_folder = os.path.abspath(args.folder)
-        if os.path.isdir(abs_folder):
-            print(f"Scanning folder: {abs_folder}...")
-            for root, dirs, files in os.walk(abs_folder):
-                for file in files:
-                    if file.lower().endswith(".mp4"):
-                        video_files.append(os.path.join(root, file))
-        else:
-            print(f"Error: Folder '{abs_folder}' not found.")
+        for root, _, files in os.walk(abs_folder):
+            for file in files:
+                if file.lower().endswith(".mp4"):
+                    video_files.append(os.path.join(root, file))
 
     if not video_files:
-        print("No valid .mp4 files found to process. Use -path or -folder.")
+        print("No videos found.")
         return
 
-    print(f"Found {len(video_files)} video(s) to process.\n" + "-"*30)
+    print(f"Distributing {len(video_files)} \
+            videos across {WORKER_COUNT} CPUs...")
 
-    for vid in video_files:
-        process_video(vid, output_folder)
+    # --- THE MULTIPROCESSING MAGIC ---
+    worker_func = partial(process_video_worker,
+                          output_folder=output_folder)
 
-    print("-"*30 + f"\nAll tasks complete. Frames are in: {output_folder}")
+    with Pool(processes=WORKER_COUNT) as pool:
+        # 'imap_unordered' for easy balanacing
+        for result in pool.imap_unordered(worker_func, video_files):
+            print(f"  [+] {result}")
+
+    print(f"\nProcessing complete. All frames in: {output_folder}")
 
 
 if __name__ == "__main__":
