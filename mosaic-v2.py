@@ -216,12 +216,19 @@ class TileFitterSciKit:
             candidate_np = self.tiles_np[idx]
 
             # SSIM needs to know the range of pixel values (0-255)
-            score = ssim(target_np,
-                         candidate_np,
-                         channel_axis=2,
-                         data_range=255)
+            try:
+                score = ssim(target_np,
+                             candidate_np,
+                             channel_axis=2,
+                             data_range=255)
+                score = score - self.usages[idx]
 
-            score = score - self.usages[idx]
+            except ValueError as e:
+                # codes sometimes breaks and hangs.
+                print(f'Got exception {e} \
+                        skipping index{idx} \
+                        data was {type(candidate_np)}')
+                continue
 
             if score > best_score:
                 best_score = score
