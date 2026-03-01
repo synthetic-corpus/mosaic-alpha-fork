@@ -174,7 +174,7 @@ class TileFitter:
 
 
 class TileFitterSciKit:
-    def __init__(self, tiles_data, match_res=TILE_MATCH_RES, penalty=0.1):
+    def __init__(self, tiles_data, match_res=TILE_MATCH_RES, penalty=0.02):
         # tiles_data here is the 'small_tiles' list from TileProcessor
         self.penalty = penalty
         self.usages = [0.0 for x in range(len(tiles_data))]
