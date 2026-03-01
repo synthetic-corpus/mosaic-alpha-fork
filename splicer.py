@@ -8,6 +8,19 @@ from functools import partial
 WORKER_COUNT = cpu_count()
 
 
+def is_video_readable(v_path):
+    """ Verifies if a file is not corrupted """
+    cap = cv2.VideoCapture(v_path)
+    if not cap.isOpened():
+        return False
+
+    # Try to grab just the first frame to see if the decoder barfs
+    ret, frame = cap.read()
+    cap.release()
+
+    return ret and frame is not None
+
+
 def get_file_md5(file_path):
     hash_md5 = hashlib.md5()
     try:
@@ -32,6 +45,9 @@ def resize_maintain_aspect(frame, short_side_target=200):
 
 def process_video_worker(absolute_video_path, output_folder):
     """The function each CPU core will run."""
+    if not is_video_readable(absolute_video_path):
+        return f"Error: {os.path.basename(absolute_video_path)}\
+                is not readable!"
     cap = cv2.VideoCapture(absolute_video_path)
     if not cap.isOpened():
         return f"Error: {os.path.basename(absolute_video_path)}"
