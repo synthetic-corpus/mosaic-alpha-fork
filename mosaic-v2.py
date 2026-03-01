@@ -173,8 +173,10 @@ class TileFitter:
 
 
 class TileFitterSciKit:
-    def __init__(self, tiles_data, match_res=TILE_MATCH_RES):
+    def __init__(self, tiles_data, match_res=TILE_MATCH_RES, penalty=0.1):
         # tiles_data here is the 'small_tiles' list from TileProcessor
+        self.penalty = penalty
+        self.usages = [0.0 for x in range(len(tiles_data))]
         self.tiles_data = tiles_data
         self.match_res = match_res
 
@@ -218,6 +220,8 @@ class TileFitterSciKit:
                          channel_axis=2,
                          data_range=255)
 
+            score = score - self.usages[idx]
+
             if score > best_score:
                 best_score = score
                 best_fit_tile_index = idx
@@ -226,6 +230,8 @@ class TileFitterSciKit:
             if score > 0.98:
                 break
 
+        self.usages[best_fit_tile_index] = \
+            self.usages[best_fit_tile_index] + self.penalty
         return best_fit_tile_index
 
 
