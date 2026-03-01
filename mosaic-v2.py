@@ -3,6 +3,7 @@ import os
 import io
 import hashlib
 import os.path
+import argparse
 from PIL import Image, ImageOps
 from scipy.spatial import KDTree
 import numpy as np
@@ -391,14 +392,36 @@ def mosaic(img_path, tiles_path):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) < 3:
-        show_error('Usage: {} <image> <tiles directory>\r'.format(sys.argv[0]))
-    else:
-        source_image = sys.argv[1]
-        tile_dir = sys.argv[2]
+
+    parser = argparse.ArgumentParser(
+        description="Generate a high-quality mosaic.")
+
+    # Create the mutually exclusive group for input
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("-file", "-f", help="Path to the source image file.")
+    group.add_argument("-folder", help="Path to a \
+                       folder of images (not yet implemented).")
+
+    # The tiles directory with a default value
+    parser.add_argument("-tiles", "-t",
+                        default="/mnt/ebs/frames",
+                        help="Path to the directory \
+                              containing tiles (default: /mnt/ebs/frames)")
+
+    args = parser.parse_args()
+
+    # Current logic: Only handle the single file mode
+    if args.file:
+        source_image = os.path.abspath(args.file)
+        tile_dir = os.path.abspath(args.tiles)
+
         if not os.path.isfile(source_image):
-            show_error("Unable to find image file '{}'".format(source_image))
+            show_error(f"Unable to find image file '{source_image}'")
         elif not os.path.isdir(tile_dir):
-            show_error("Unable to find tile directory '{}'".format(tile_dir))
+            show_error(f"Unable to find tile directory '{tile_dir}'")
         else:
+            # Trigger the mosaic process
             mosaic(source_image, tile_dir)
+
+    elif args.folder:
+        print("Folder mode requested, but not yet implemented. Stay tuned!")
