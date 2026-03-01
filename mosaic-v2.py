@@ -380,15 +380,14 @@ def show_error(msg):
     print('ERROR: {}'.format(msg))
 
 
-def mosaic(img_path, tiles_path):
+def mosaic(img_path, tiles_data):
+    """ Takes in Tiles Data as an Agrument now """
     image_data = TargetImage(img_path).get_data()
-    tiles_data = TileProcessor(tiles_path).get_tiles()
+    # tiles_data = TileProcessor(tiles_path).get_tiles()
     if tiles_data[0]:
         compose(image_data, tiles_data)
     else:
-        show_error(
-            "No images found in tiles directory '{}'".format(tiles_path)
-            )
+        show_error("Tiles Data not propery formatted!")
 
 
 if __name__ == '__main__':
@@ -421,7 +420,28 @@ if __name__ == '__main__':
             show_error(f"Unable to find tile directory '{tile_dir}'")
         else:
             # Trigger the mosaic process
-            mosaic(source_image, tile_dir)
+            tiles_data = TileProcessor(tile_dir).get_tiles()
+            mosaic(source_image, tiles_data)
 
     elif args.folder:
-        print("Folder mode requested, but not yet implemented. Stay tuned!")
+        abs_folder = os.path.abspath(args.folder)
+        tile_dir = os.path.abspath(args.tiles)
+        try:
+            samples = [e.path for e in os.scandir(abs_folder)
+                       if e.is_file()]
+        except FileNotFoundError:
+            print(f"Error: Folder '{abs_folder}' not found.")
+            exit(1)
+        tiles_data = TileProcessor(tile_dir).get_tiles()
+        for file_path in samples:
+            if not os.path.isfile(file_path):
+                show_error(f"Unable to find image file \
+                           '{file_path}'")
+                continue
+            elif not os.path.isdir(tile_dir):
+                show_error(f"Unable to find tile directory \
+                           '{tile_dir}'")
+                continue
+            else:
+                # Trigger the mosaic process
+                mosaic(file_path, tiles_data)
