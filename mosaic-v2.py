@@ -220,7 +220,8 @@ class TileFitterSciKit:
                 score = ssim(target_np,
                              candidate_np,
                              channel_axis=2,
-                             data_range=255)
+                             data_range=255,
+                             win_size=3)
                 score = score - self.usages[idx]
 
             except ValueError as e:
