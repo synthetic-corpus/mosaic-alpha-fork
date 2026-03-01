@@ -1,6 +1,6 @@
 boto3>=1.42.59
-Pillow>=12.1.1
+Pillow>=11.3.0
 opencv-python>=4.13.0.92
-numpy>=2.42
-scipy>=1.17.0
+numpy>=2.0.2
+scipy>=1.13.1
 scikit-image>=0.26.0
