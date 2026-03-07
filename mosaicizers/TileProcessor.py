@@ -4,9 +4,10 @@ from PIL import Image, ImageOps
 
 class TileProcessor:
     def __init__(self, tiles_directory, tile_size=50, tile_res=5):
+        bottom = max(min(tile_res, tile_size), 1)
         self.tiles_directory = tiles_directory
         self.tile_size = tile_size,
-        self.tile_block_size = tile_size / max(min(tile_res, tile_size), 1)
+        self.tile_block_size = tile_size / bottom
         self.tile_res = tile_res
 
     def get_average_color(self, img_path_or_obj):
