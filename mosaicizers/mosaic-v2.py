@@ -229,4 +229,5 @@ if __name__ == '__main__':
                 continue
             else:
                 # Trigger the mosaic process
-                mosaic(file_path, tiles_data, penalty=args.penalty)
+                mosaic(file_path, tiles_data,
+                       penalty=args.penalty, suffix=args.suffix)
