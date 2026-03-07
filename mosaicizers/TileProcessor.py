@@ -4,10 +4,9 @@ from PIL import Image, ImageOps
 
 class TileProcessor:
     def __init__(self, tiles_directory, tile_size=50, tile_res=5):
-        bottom = max(min(tile_res, tile_size), 1)
         self.tiles_directory = tiles_directory
-        self.tile_size = tile_size,
-        self.tile_block_size = tile_size / bottom
+        self.tile_size = tile_size
+        self.tile_block_size = tile_size / max(min(tile_res, tile_size), 1)
         self.tile_res = tile_res
 
     def get_average_color(self, img_path_or_obj):
@@ -53,7 +52,9 @@ class TileProcessor:
 
             return (large_tile_img.convert('RGB'),
                     small_tile_img.convert('RGB'))
-        except Exception:
+        except Exception as e:
+            print(f"Error processing tile '{tile_path}': {e}")
+            exit(1)
             return (None, None)
 
     def get_tiles(self):
