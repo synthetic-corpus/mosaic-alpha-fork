@@ -218,7 +218,8 @@ if __name__ == '__main__':
             print(f"Error: Folder '{abs_folder}' not found.")
             exit(1)
         try:
-            tiles_data = TileProcessor(tile_dir).get_tiles()
+            tp = TileProcessor(tile_dir)
+            tiles_data = tp.get_tiles()
         except FileNotFoundError:
             print(f"Error: Tile directory '{tile_dir}' not found.")
             exit(1)
