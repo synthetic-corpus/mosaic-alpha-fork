@@ -10,10 +10,10 @@ import argparse
 from multiprocessing import Process, Queue, cpu_count
 
 # These are the custom imports
-import MosaicImage
-import TargetImage
+from MosaicImage import MosaicImage
+from TargetImage import TargetImage
 from TileProcessor import TileProcessor
-import TileFitterSciKit
+from TileFitterSciKit import TileFitterSciKit
 
 # These are now configed by CLI or class defaults
 TILE_SIZE = 50     # height/width of mosaic tiles in pixels
