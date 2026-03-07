@@ -153,11 +153,14 @@ def main():
         photos = []
         for root, _, files in os.walk(abs_folder):
             for file in files:
-                extension = file.split(".")
+                extension = file.split(".")[-1]
                 if extension.lower() in ["png", "jpg", "jpeg"]:
                     photos.append(os.path.join(root, file))
         if len(photos) == 0:
             print(f'No photos found {abs_folder}')
+        for photo in photos:
+            process_image(photo, double=True,
+                          output_dir="/mnt/ebs/frames")
         return
 
     # --- BRANCH 2: VIDEO PROCESSING ---
