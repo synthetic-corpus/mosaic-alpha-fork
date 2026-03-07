@@ -2,7 +2,7 @@ import os
 import argparse
 import sys
 from PIL import Image
-from tools.s3_access import S3Access
+from s3_access import S3Access
 
 
 def resize_in_place(file_path, max_dimension=600):
