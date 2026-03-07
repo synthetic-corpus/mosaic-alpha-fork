@@ -32,16 +32,25 @@ def main():
     )
 
     parser.add_argument(
+        # videos to made to tiles
         "--all-videos",
         action="store_true",
         help="Download all objects from the 'lowresvideo' \
               prefix to /mnt/ebs/raw_vids"
     )
     parser.add_argument(
-        "--all-photos",
+        # Images to made to mosaics
+        "--all-samples",
         action="store_true",
         help="Download .png and .jpeg objects from \
               'moasic-art-photos' to /mnt/ebs/samples"
+    )
+    parser.add_argument(
+        # Images to made to mosaics
+        "--all-photos",
+        action="store_true",
+        help="Download .png and .jpeg objects from \
+              'picsources' to /mnt/ebs/raw_photos"
     )
     # New flag for uploading results
     parser.add_argument(
@@ -77,21 +86,39 @@ def main():
                     os.path.join(local_vids_dir, os.path.basename(key)))
 
     # --- Logic for Photos to be turned to mosaics (Download)
-    if args.all_photos:
+    if args.all_samples:
         local_photos_dir = os.path.join(mount_point, "samples")
         os.makedirs(local_photos_dir, exist_ok=True)
 
-        print(f"Downloading photos to {local_photos_dir}...")
+        print(f"Downloading samples to {local_photos_dir}...")
         keys = s3.list_sources("mosaic-art-photos")
         valid_extensions = ('.png', '.jpeg', '.jpg')
 
         for key in keys:
             if key.lower().endswith(valid_extensions):
                 # downloads source files from s3
-                # ensures they are never larger 600 on longer side
                 filename = os.path.basename(key)
                 s3.download_to_disk(
                     key, os.path.join(local_photos_dir, filename))
+                # ensures they are never larger 600 on longer side
+                resize_in_place(os.path.join(local_photos_dir, filename))
+
+    # --- Logic for Photos to be turned to mosaics (Download)
+    if args.all_photos:
+        local_photos_dir = os.path.join(mount_point, "raw_photos")
+        os.makedirs(local_photos_dir, exist_ok=True)
+
+        print(f"Downloading tile photos to {local_photos_dir}...")
+        keys = s3.list_sources("picsources")
+        valid_extensions = ('.png', '.jpeg', '.jpg')
+
+        for key in keys:
+            if key.lower().endswith(valid_extensions):
+                # downloads source files from s3
+                filename = os.path.basename(key)
+                s3.download_to_disk(
+                    key, os.path.join(local_photos_dir, filename))
+                # ensures no files are larger 600 on any side.
                 resize_in_place(os.path.join(local_photos_dir, filename))
 
     # --- Logic for Results (Upload) ---
