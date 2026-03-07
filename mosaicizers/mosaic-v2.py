@@ -27,8 +27,9 @@ WORKER_COUNT = max(cpu_count() - 1, 1)
 EOQ_VALUE = None
 
 
-def fit_tiles(work_queue, result_queue, tiles_data):
-    tile_fitter = TileFitterSciKit(tiles_data)
+def fit_tiles(work_queue, result_queue,
+              tiles_data, penalty=0.2):
+    tile_fitter = TileFitterSciKit(tiles_data, penalty=penalty)
 
     while True:
         try:
@@ -57,7 +58,7 @@ class ProgressCounter:
 def build_mosaic(result_queue,
                  all_tile_data_large,
                  original_img_large,
-                 suffix):
+                 suffix=''):
     mosaic = MosaicImage(original_img_large)
 
     active_workers = WORKER_COUNT
@@ -80,7 +81,7 @@ def build_mosaic(result_queue,
     print('\nFinished, output is in', OUT_FILEPATH)
 
 
-def compose(original_img, tiles):
+def compose(original_img, tiles, penalty=0.2, suffix=''):
     print('Building mosaic, press Ctrl-C to abort...')
     original_img_large, original_img_small = original_img
     tiles_large, tiles_small = tiles
@@ -95,11 +96,13 @@ def compose(original_img, tiles):
 
     try:
         Process(target=build_mosaic, args=(
-            result_queue, all_tile_data_large, original_img_large)).start()
+            result_queue, all_tile_data_large,
+            original_img_large, suffix)).start()
 
         for n in range(WORKER_COUNT):
             Process(target=fit_tiles, args=(
-                work_queue, result_queue, all_tile_data_small)).start()
+                work_queue, result_queue,
+                all_tile_data_small, penalty)).start()
 
         progress = ProgressCounter(mosaic.x_tile_count * mosaic.y_tile_count)
         for x in range(mosaic.x_tile_count):
@@ -134,12 +137,12 @@ def show_error(msg):
     print('ERROR: {}'.format(msg))
 
 
-def mosaic(img_path, tiles_data):
+def mosaic(img_path, tiles_data, penalty=0.2, suffix=''):
     """ Takes in Tiles Data as an Agrument now """
     image_data = TargetImage(img_path).get_data()
     # tiles_data = TileProcessor(tiles_path).get_tiles()
     if tiles_data[0]:
-        compose(image_data, tiles_data)
+        compose(image_data, tiles_data, penalty=penalty, suffix=suffix)
     else:
         show_error("Tiles Data not propery formatted!")
 
@@ -152,7 +155,7 @@ if __name__ == '__main__':
             raise argparse.ArgumentTypeError(f"{x} is not a \
                                               floating-point number")
 
-        if x < 0.01 or x > 0.5:
+        if x < 0.0 or x > 0.5:
             raise argparse.ArgumentTypeError(f"{x} is not in range \
                                              [0.01, 0.5]")
         return x
@@ -182,11 +185,12 @@ if __name__ == '__main__':
                               if you want it appended \
                               to the file name.")
 
-    parser.add_argument('-ratio',
+    parser.add_argument('-penalty',
                         type=restricted_float,
                         default=0.2,
-                        help="Set the ratio (range: 0.01 to 0.5, \
-                              default: 0.2)")
+                        help="Set the penalty (range: 0.0 to 0.5, \
+                              default: 0.2) \
+                              High Penalty means less repetition of tiles")
     args = parser.parse_args()
 
     # Current logic: Only handle the single file mode
@@ -201,7 +205,8 @@ if __name__ == '__main__':
         else:
             # Trigger the mosaic process
             tiles_data = TileProcessor(tile_dir).get_tiles()
-            mosaic(source_image, tiles_data)
+            mosaic(source_image, tiles_data,
+                   penalty=args.penalty, suffix=args.suffix)
 
     elif args.folder:
         abs_folder = os.path.abspath(args.folder)
@@ -224,4 +229,4 @@ if __name__ == '__main__':
                 continue
             else:
                 # Trigger the mosaic process
-                mosaic(file_path, tiles_data)
+                mosaic(file_path, tiles_data, penalty=args.penalty)
