@@ -217,7 +217,14 @@ if __name__ == '__main__':
         except FileNotFoundError:
             print(f"Error: Folder '{abs_folder}' not found.")
             exit(1)
-        tiles_data = TileProcessor(tile_dir).get_tiles()
+        try:
+            tiles_data = TileProcessor(tile_dir).get_tiles()
+        except FileNotFoundError:
+            print(f"Error: Tile directory '{tile_dir}' not found.")
+            exit(1)
+        except Exception as e:
+            print(f"Error running TileProcessor class '{tile_dir}': {e}")
+            exit(1)
         for file_path in samples:
             if not os.path.isfile(file_path):
                 show_error(f"Unable to find image file \
