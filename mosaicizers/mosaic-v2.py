@@ -12,7 +12,7 @@ from multiprocessing import Process, Queue, cpu_count
 # These are the custom imports
 import MosaicImage
 import TargetImage
-import TileProcessor
+from TileProcessor import TileProcessor
 import TileFitterSciKit
 
 # These are now configed by CLI or class defaults
