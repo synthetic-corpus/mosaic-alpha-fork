@@ -66,7 +66,7 @@ def compose(original_img, tiles, penalty=0.2, suffix=''):
     all_tile_data_large = [list(tile.getdata()) for tile in tiles_large]
     all_tile_data_small = [list(tile.getdata()) for tile in tiles_small]
 
-    work_queue = Queue(WORKER_COUNT)
+    work_queue = Queue()
     result_queue = Queue()
 
     # 2. Start the computational WORKERS only
@@ -99,25 +99,22 @@ def compose(original_img, tiles, penalty=0.2, suffix=''):
         # 4. Phase 2: Collect and Paste (The Consumer)
         # We call this in the MAIN process. It will block here until
         # the workers finish sending results through the result_queue.
-        mosaic.assemble(result_queue, all_tile_data_large,
-                        WORKER_COUNT)
-        mosaic.save(suffix=suffix)
 
     except KeyboardInterrupt:
         print('\nHalting, saving partial image please wait...')
         # We tell the workers to stop
         for n in range(WORKER_COUNT):
             work_queue.put((EOQ_VALUE, EOQ_VALUE))
-        # Optional: assemble what you have.
-        mosaic.assemble(result_queue, all_tile_data_large,
-                        WORKER_COUNT, suffix=suffix)
-        mosaic.save(suffix=suffix)
 
     finally:
         # Ensure workers are cleaned up
         for p in worker_pool:
             if p.is_alive():
                 work_queue.put((EOQ_VALUE, EOQ_VALUE))
+
+        mosaic.assemble(result_queue, all_tile_data_large,
+                        WORKER_COUNT)
+        mosaic.save(suffix=suffix)
 
 
 def show_error(msg):
