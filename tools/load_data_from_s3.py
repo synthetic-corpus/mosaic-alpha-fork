@@ -55,6 +55,13 @@ def main():
     )
     parser.add_argument(
         # Images to made to mosaics
+        "--some-samples",
+        action="store_true",
+        help="Download .png and .jpeg objects from \
+              'moasic-art-photos' to /mnt/ebs/samples"
+    )
+    parser.add_argument(
+        # Images to made to mosaics
         "--all-photos",
         action="store_true",
         help="Download .png and .jpeg objects from \
@@ -134,6 +141,27 @@ def main():
                 resize_in_place(os.path.join(local_photos_dir, filename))
 
     # --- Logic for Photos to be turned to mosaics (Download)
+    if args.some_samples:
+        """ Limits to just three from the 'mosaic-art-photos' """
+        local_photos_dir = os.path.join(mount_point, "samples")
+        os.makedirs(local_photos_dir, exist_ok=True)
+
+        print(f"Downloading samples to {local_photos_dir}...")
+        keys = s3.list_sources("mosaic-art-photos")
+        valid_extensions = ('.png', '.jpeg', '.jpg')
+        shuffle(keys)
+        keys = keys[:3]
+
+        for key in keys:
+            if key.lower().endswith(valid_extensions):
+                # downloads source files from s3
+                filename = os.path.basename(key)
+                s3.download_to_disk(
+                    key, os.path.join(local_photos_dir, filename))
+                # ensures they are never larger 600 on longer side
+                resize_in_place(os.path.join(local_photos_dir, filename))
+
+    # --- Logic for Photos to be used as tiles (Download)
     if args.all_photos:
         local_photos_dir = os.path.join(mount_point, "raw_photos")
         os.makedirs(local_photos_dir, exist_ok=True)
