@@ -3,6 +3,7 @@ import argparse
 import sys
 from PIL import Image
 from s3_access import S3Access
+from random import shuffle
 
 
 def resize_in_place(file_path, max_dimension=600):
@@ -39,6 +40,13 @@ def main():
               prefix to /mnt/ebs/raw_vids"
     )
     parser.add_argument(
+        # videos to made to tiles
+        "--some-videos",
+        action="store_true",
+        help="Download random 15 videos from the 'lowresvideo' \
+              prefix to /mnt/ebs/raw_vids"
+    )
+    parser.add_argument(
         # Images to made to mosaics
         "--all-samples",
         action="store_true",
@@ -50,6 +58,13 @@ def main():
         "--all-photos",
         action="store_true",
         help="Download .png and .jpeg objects from \
+              'picsources' to /mnt/ebs/raw_photos"
+    )
+    parser.add_argument(
+        # Images to made to mosaics
+        "--some-photos",
+        action="store_true",
+        help="Download a random 100 .png and .jpeg objects from \
               'picsources' to /mnt/ebs/raw_photos"
     )
     # New flag for uploading results
@@ -85,6 +100,21 @@ def main():
                     key,
                     os.path.join(local_vids_dir, os.path.basename(key)))
 
+    if args.some_videos:
+        """ Grabs a random 15 videos, rather than all" """
+        local_vids_dir = os.path.join(mount_point, "raw_vids")
+        os.makedirs(local_vids_dir, exist_ok=True)
+
+        print(f"Downloading videos to {local_vids_dir}...")
+        keys = s3.list_sources("lowresvideo")
+        shuffle(keys)
+        keys = keys[:15]
+        for key in keys:
+            if os.path.basename(key):
+                s3.download_to_disk(
+                    key,
+                    os.path.join(local_vids_dir, os.path.basename(key)))
+
     # --- Logic for Photos to be turned to mosaics (Download)
     if args.all_samples:
         local_photos_dir = os.path.join(mount_point, "samples")
@@ -110,6 +140,27 @@ def main():
 
         print(f"Downloading tile photos to {local_photos_dir}...")
         keys = s3.list_sources("picsources")
+        valid_extensions = ('.png', '.jpeg', '.jpg')
+
+        for key in keys:
+            if key.lower().endswith(valid_extensions):
+                # downloads source files from s3
+                filename = os.path.basename(key)
+                s3.download_to_disk(
+                    key, os.path.join(local_photos_dir, filename))
+                # ensures no files are larger 600 on any side.
+                resize_in_place(os.path.join(local_photos_dir, filename))
+
+        # --- Logic for Photos to be turned to mosaics (Download)
+    if args.some_photos:
+        """ Grabs a random 100 photos, rather than all" """
+        local_photos_dir = os.path.join(mount_point, "raw_photos")
+        os.makedirs(local_photos_dir, exist_ok=True)
+
+        print(f"Downloading tile photos to {local_photos_dir}...")
+        keys = s3.list_sources("picsources")
+        shuffle(keys)
+        keys = keys[:100]
         valid_extensions = ('.png', '.jpeg', '.jpg')
 
         for key in keys:
