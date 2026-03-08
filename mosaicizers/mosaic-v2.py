@@ -86,6 +86,7 @@ def compose(original_img, tiles, penalty=0.2, suffix=''):
     original_img_large, original_img_small = original_img
     tiles_large, tiles_small = tiles
 
+    # 1. Initialize our mosaic object
     mosaic = MosaicImage(original_img_large)
 
     all_tile_data_large = [list(tile.getdata()) for tile in tiles_large]
@@ -94,43 +95,55 @@ def compose(original_img, tiles, penalty=0.2, suffix=''):
     work_queue = Queue(WORKER_COUNT)
     result_queue = Queue()
 
+    # 2. Start the computational WORKERS only
+    worker_pool = []
+    for n in range(WORKER_COUNT):
+        p = Process(target=fit_tiles, args=(
+            work_queue, result_queue,
+            all_tile_data_small, penalty))
+        p.start()
+        worker_pool.append(p)
+
     try:
-        Process(target=build_mosaic, args=(
-            result_queue, all_tile_data_large,
-            original_img_large, suffix)).start()
-
-        for n in range(WORKER_COUNT):
-            Process(target=fit_tiles, args=(
-                work_queue, result_queue,
-                all_tile_data_small, penalty)).start()
-
+        # 3. Phase 1: Dispatch work (The Producer)
         progress = ProgressCounter(mosaic.x_tile_count * mosaic.y_tile_count)
         for x in range(mosaic.x_tile_count):
             for y in range(mosaic.y_tile_count):
-                large_box = (
-                    x * TILE_SIZE,
-                    y * TILE_SIZE,
-                    (x + 1) * TILE_SIZE,
-                    (y + 1) * TILE_SIZE
-                )
-                small_box = (
-                    x * TILE_SIZE / TILE_BLOCK_SIZE,
-                    y * TILE_SIZE / TILE_BLOCK_SIZE,
-                    (x + 1) * TILE_SIZE / TILE_BLOCK_SIZE,
-                    (y + 1) * TILE_SIZE / TILE_BLOCK_SIZE
-                )
+                # ... [Your existing cropping logic here] ...
+                large_box = (x * TILE_SIZE, y * TILE_SIZE,
+                             (x + 1) * TILE_SIZE, (y + 1) * TILE_SIZE)
+                small_box = (x * TILE_SIZE / TILE_BLOCK_SIZE,
+                             y * TILE_SIZE / TILE_BLOCK_SIZE,
+                             (x + 1) * TILE_SIZE / TILE_BLOCK_SIZE,
+                             (y + 1) * TILE_SIZE / TILE_BLOCK_SIZE)
+
                 work_queue.put(
                     (list(original_img_small.crop(small_box).getdata()),
-                     large_box)
-                    )
-            progress.update()  # process updates on every x completion.
+                     large_box))
+            progress.update()
+
+        # 4. Phase 2: Collect and Paste (The Consumer)
+        # We call this in the MAIN process. It will block here until
+        # the workers finish sending results through the result_queue.
+        mosaic.assemble(result_queue, all_tile_data_large,
+                        WORKER_COUNT, suffix=suffix)
+        mosaic.save(suffix=suffix)
 
     except KeyboardInterrupt:
         print('\nHalting, saving partial image please wait...')
-
-    finally:
+        # We tell the workers to stop
         for n in range(WORKER_COUNT):
             work_queue.put((EOQ_VALUE, EOQ_VALUE))
+        # Optional: assemble what you have.
+        mosaic.assemble(result_queue, all_tile_data_large,
+                        WORKER_COUNT, suffix=suffix)
+        mosaic.save(suffix=suffix)
+
+    finally:
+        # Ensure workers are cleaned up
+        for p in worker_pool:
+            if p.is_alive():
+                work_queue.put((EOQ_VALUE, EOQ_VALUE))
 
 
 def show_error(msg):

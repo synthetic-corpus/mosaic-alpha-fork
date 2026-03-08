@@ -42,3 +42,26 @@ class MosaicImage:
 
         print(f"Mosaic saved to: {final_path}")
         return final_path
+
+    def assemble(self, result_queue, all_tile_data_large,
+                 worker_count):
+        """
+        Monitors the result_queue and assembles the image in real-time.
+        Replaces the standalone build_mosaic function.
+        """
+        print('\nAssembling mosaic blocks...')
+        active_workers = worker_count
+        EOQ_VALUE = None  # Sentinel value to indicate end of queue
+
+        while active_workers > 0:
+            try:
+                img_coords, best_fit_tile_index = result_queue.get()
+
+                if img_coords == EOQ_VALUE:
+                    active_workers -= 1
+                else:
+                    tile_data = all_tile_data_large[best_fit_tile_index]
+                    self.add_tile(tile_data, img_coords)
+            except KeyboardInterrupt:
+                print('\nInterrupt detected, saving progress...')
+                break
