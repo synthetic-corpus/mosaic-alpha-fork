@@ -1,13 +1,38 @@
 import os
+import pickle
+import gzip
 from PIL import Image, ImageOps
 
 
 class TileProcessor:
-    def __init__(self, tiles_directory, tile_size=50, tile_res=5):
+    def __init__(self, tiles_directory,
+                 tile_size=50, tile_res=5,
+                 cache_file='/mnt/ebs/TILES_DATA.pkl.gz'):
         self.tiles_directory = tiles_directory
         self.tile_size = tile_size
         self.tile_block_size = tile_size / max(min(tile_res, tile_size), 1)
         self.tile_res = tile_res
+        self.cache_file = cache_file
+
+    def tiles_save(self, data):
+        """Saves processed tile data to a compressed pickle file."""
+        print(f"Caching processed tiles to {self.cache_file}...")
+        try:
+            with gzip.open(self.cache_file, 'wb') as f:
+                pickle.dump(data, f, protocol=pickle.HIGHEST_PROTOCOL)
+            print("Cache saved successfully.")
+        except Exception as e:
+            print(f"Failed to save cache: {e}")
+
+    def tiles_load(self):
+        """Loads processed tile data from the compressed pickle file."""
+        print(f"Loading cached tiles from {self.cache_file}...")
+        try:
+            with gzip.open(self.cache_file, 'rb') as f:
+                return pickle.load(f)
+        except Exception as e:
+            print(f"Failed to load cache: {e}")
+            return None
 
     def get_average_color(self, img_path_or_obj):
         """
@@ -64,6 +89,12 @@ class TileProcessor:
         exp_threshold = 1  # for logging
         print('Reading tiles from {}...'.format(self.tiles_directory))
 
+        if os.path.exists(self.cache_file):
+            data = self.tiles_load()
+            if data:
+                print(f"Loaded {len(data[0])} tiles from cache.")
+                return data
+
         # search the tiles directory recursively
         for root, subFolders, files in os.walk(self.tiles_directory):
             for tile_name in files:
@@ -79,4 +110,6 @@ class TileProcessor:
 
         print('Processed {} tiles.'.format(len(large_tiles)))
 
-        return (large_tiles, small_tiles)
+        data = (large_tiles, small_tiles)
+        self.tiles_save(data)
+        return data
