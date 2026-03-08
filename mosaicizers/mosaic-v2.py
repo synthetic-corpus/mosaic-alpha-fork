@@ -100,7 +100,7 @@ def compose(original_img, tiles, penalty=0.2, suffix=''):
         # We call this in the MAIN process. It will block here until
         # the workers finish sending results through the result_queue.
         mosaic.assemble(result_queue, all_tile_data_large,
-                        WORKER_COUNT, suffix=suffix)
+                        WORKER_COUNT)
         mosaic.save(suffix=suffix)
 
     except KeyboardInterrupt:
