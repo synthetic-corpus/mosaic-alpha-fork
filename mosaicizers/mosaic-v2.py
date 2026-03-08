@@ -14,6 +14,7 @@ from MosaicImage import MosaicImage
 from TargetImage import TargetImage
 from TileProcessor import TileProcessor
 from TileFitterSciKit import TileFitterSciKit
+from ProgressCounter import ProgressCounter
 
 # These are now configed by CLI or class defaults
 TILE_SIZE = 50     # height/width of mosaic tiles in pixels
@@ -25,34 +26,6 @@ TILE_BLOCK_SIZE = TILE_SIZE / max(min(TILE_MATCH_RES, TILE_SIZE), 1)
 WORKER_COUNT = max(cpu_count() - 1, 1)
 # OUT_FILE = 'mosaic.jpeg'
 EOQ_VALUE = None
-
-
-def fit_tiles(work_queue, result_queue,
-              tiles_data, penalty=0.2):
-    tile_fitter = TileFitterSciKit(tiles_data, penalty=penalty)
-
-    while True:
-        try:
-            img_data, img_coords = work_queue.get(True)
-            if img_data == EOQ_VALUE:
-                break
-            tile_index = tile_fitter.get_best_fit_tile(img_data)
-            result_queue.put((img_coords, tile_index))
-        except KeyboardInterrupt:
-            pass
-
-    result_queue.put((EOQ_VALUE, EOQ_VALUE))
-
-
-class ProgressCounter:
-    def __init__(self, total):
-        self.total = total
-        self.counter = 0
-
-    def update(self):
-        self.counter += 1
-        print("Progress: {:04.1f}%".format(100 * self.counter / self.total),
-              flush=True, end='\r')
 
 
 def compose(original_img, tiles, penalty=0.2, suffix=''):
@@ -94,7 +67,7 @@ def compose(original_img, tiles, penalty=0.2, suffix=''):
                 work_queue.put(
                     (list(original_img_small.crop(small_box).getdata()),
                      large_box))
-            progress.update()
+                progress.update()
 
         # 4. Phase 2: Collect and Paste (The Consumer)
         # We call this in the MAIN process. It will block here until

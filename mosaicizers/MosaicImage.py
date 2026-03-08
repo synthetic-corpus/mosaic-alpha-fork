@@ -2,6 +2,7 @@ import io
 import os
 import hashlib
 from PIL import Image
+from ProgressCounter import ProgressCounter
 
 
 class MosaicImage:
@@ -50,6 +51,7 @@ class MosaicImage:
         Replaces the standalone build_mosaic function.
         """
         print('\nAssembling mosaic blocks...')
+        progress = ProgressCounter(self.total_tiles)
         active_workers = worker_count
         EOQ_VALUE = None  # Sentinel value to indicate end of queue
 
@@ -62,6 +64,7 @@ class MosaicImage:
                 else:
                     tile_data = all_tile_data_large[best_fit_tile_index]
                     self.add_tile(tile_data, img_coords)
+                    progress.update()
             except KeyboardInterrupt:
                 print('\nInterrupt detected, saving progress...')
                 break
