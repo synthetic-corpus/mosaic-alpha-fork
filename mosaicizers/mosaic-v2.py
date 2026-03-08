@@ -55,32 +55,6 @@ class ProgressCounter:
               flush=True, end='\r')
 
 
-def build_mosaic(result_queue,
-                 all_tile_data_large,
-                 original_img_large,
-                 suffix=''):
-    mosaic = MosaicImage(original_img_large)
-
-    active_workers = WORKER_COUNT
-    while True:
-        try:
-            img_coords, best_fit_tile_index = result_queue.get()
-
-            if img_coords == EOQ_VALUE:
-                active_workers -= 1
-                if not active_workers:
-                    break
-            else:
-                tile_data = all_tile_data_large[best_fit_tile_index]
-                mosaic.add_tile(tile_data, img_coords)
-
-        except KeyboardInterrupt:
-            pass
-
-    OUT_FILEPATH = mosaic.save(suffix=suffix)
-    print('\nFinished, output is in', OUT_FILEPATH)
-
-
 def compose(original_img, tiles, penalty=0.2, suffix=''):
     print('Building mosaic, press Ctrl-C to abort...')
     original_img_large, original_img_small = original_img
@@ -98,9 +72,9 @@ def compose(original_img, tiles, penalty=0.2, suffix=''):
     # 2. Start the computational WORKERS only
     worker_pool = []
     for n in range(WORKER_COUNT):
-        p = Process(target=fit_tiles, args=(
-            work_queue, result_queue,
-            all_tile_data_small, penalty))
+        fitter = TileFitterSciKit(all_tile_data_small, penalty=penalty)
+        p = Process(target=fitter.fit_tiles, args=(
+            work_queue, result_queue))
         p.start()
         worker_pool.append(p)
 

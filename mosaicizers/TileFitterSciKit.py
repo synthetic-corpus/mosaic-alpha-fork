@@ -24,6 +24,20 @@ class TileFitterSciKit:
         self.tree = KDTree(np.array(avg_colors))
         print("KDTree + SSIM Hybrid Fitter Ready.")
 
+    def fit_tiles(self, work_queue, result_queue):
+        EOQ_VALUE = None  # Sentinel
+        while True:
+            try:
+                img_data, img_coords = work_queue.get(True)
+                if img_data == EOQ_VALUE:
+                    break
+                tile_index = self.get_best_fit_tile(img_data)
+                result_queue.put((img_coords, tile_index))
+            except KeyboardInterrupt:
+                pass
+
+        result_queue.put((EOQ_VALUE, EOQ_VALUE))
+
     def get_best_fit_tile(self, img_data):
         """
         img_data: A flat list of pixels (from original code's getdata())
@@ -34,9 +48,8 @@ class TileFitterSciKit:
             (self.match_res, self.match_res, 3))
 
         # Step 1: KDTree Pruning (The "Bucket" step)
-        # Find the top 40 color matches
         target_avg = target_np.mean(axis=(0, 1))
-        _, indices = self.tree.query(target_avg, k=40)
+        _, indices = self.tree.query(target_avg, k=100)
 
         best_score = -1
         best_fit_tile_index = indices[0]
