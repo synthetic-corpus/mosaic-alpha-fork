@@ -10,6 +10,7 @@ class TileFitterSciKit:
         self.usages = [0.0 for x in range(len(tiles_data))]
         self.tiles_data = tiles_data
         self.match_res = match_res
+        self.winners = np.array([], dtype=float)
 
         print("Initializing KDTree for hybrid search...")
         # 1. Convert tiles to NumPy arrays once
@@ -36,6 +37,8 @@ class TileFitterSciKit:
             except KeyboardInterrupt:
                 pass
 
+        self.get_winning_stats()  # print stats
+        # Signal that this worker is done
         result_queue.put((EOQ_VALUE, EOQ_VALUE))
 
     def get_best_fit_tile(self, img_data):
@@ -51,6 +54,7 @@ class TileFitterSciKit:
         target_avg = target_np.mean(axis=(0, 1))
         _, indices = self.tree.query(target_avg, k=100)
 
+        best_raw_score = float('-inf')
         best_score = -1
         best_fit_tile_index = indices[0]
 
@@ -77,11 +81,28 @@ class TileFitterSciKit:
             if score > best_score:
                 best_score = score
                 best_fit_tile_index = idx
+                best_raw_score = score
 
             # Early exit if we find an amazing match
             if score > 0.98:
+                best_raw_score = score
                 break
 
+        self.winners = np.append(self.winners, best_raw_score)
         self.usages[best_fit_tile_index] = \
             self.usages[best_fit_tile_index] + self.penalty
         return best_fit_tile_index
+
+    def get_winning_stats(self):
+        """Prints statistical analysis of the tile match quality."""
+        if self.winners.size == 0:
+            print("No winners recorded yet.")
+            return
+
+        print("\n--- Tile Match Quality Stats ---")
+        print(f"Total Blocks Matched: {len(self.winners)}")
+        print(f"Mean SSIM:    {np.mean(self.winners):.4f}")
+        print(f"Median SSIM:  {np.median(self.winners):.4f}")
+        print(f"Highest SSIM: {np.max(self.winners):.4f} (Best Match)")
+        print(f"Lowest SSIM:  {np.min(self.winners):.4f} (Worst Match)")
+        print("--------------------------------\n")
