@@ -4,6 +4,7 @@ import hashlib
 import argparse
 from multiprocessing import Pool, cpu_count
 from functools import partial
+from PIL import Image
 
 WORKER_COUNT = cpu_count()
 
@@ -87,24 +88,93 @@ def process_video_worker(absolute_video_path, output_folder):
              ({saved_count} frames)"
 
 
+def process_image(image_path, double=True,
+                  output_dir="/mnt/ebs/frames"):
+
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    try:
+        with Image.open(image_path) as img:
+            # Ensure RGB mode
+            if img.mode != 'RGB':
+                img = img.convert('RGB')
+
+            width, height = img.size
+            short_side = min(width, height)
+            is_square = (width == height)
+
+            # --- Crop 1: Upper Left ---
+            upper_left_box = (0, 0, short_side, short_side)
+            _save_processed_crop(img.crop(upper_left_box), output_dir)
+
+            # --- Crop 2: Lower Right (If source not square) ---
+            if double and not is_square:
+                lower_right_box = (width - short_side,
+                                   height - short_side,
+                                   width, height)
+                _save_processed_crop(img.crop(lower_right_box),
+                                     output_dir)
+
+    except Exception as e:
+        print(f"Error processing {image_path}: {e}")
+
+
+def _save_processed_crop(crop_img, output_dir):
+    """Internal helper to resize, hash, and save the image."""
+    resized = crop_img.resize((200, 200), Image.Resampling.LANCZOS)
+    hash_name = hashlib.md5(resized.tobytes()).hexdigest()
+    save_path = os.path.join(output_dir, f"{hash_name}.png")
+    resized.save(save_path, "PNG")
+    print(f"  [#] Saved: {hash_name}.png")
+
+
 def main():
     parser = argparse.ArgumentParser(
-        description="Multi-threaded Frame Extraction")
-    parser.add_argument("-path",
-                        help="Path to a single video file.")
-    parser.add_argument("-folder",
-                        help="Path to folder for recursive processing.")
+        description="Multi-threaded Media Processor")
+
+    mode_group = parser.add_mutually_exclusive_group(required=True)
+
+    mode_group.add_argument("-video-file",
+                            help="Path to a single video file.")
+    mode_group.add_argument("-video-folder",
+                            help="Path to folder for recursive \
+                                 video processing.")
+    mode_group.add_argument("-image-folder",
+                            help="Path to folder containing \
+                                 images for processing.")
+
     args = parser.parse_args()
 
+    # --- BRANCH 1: IMAGE PROCESSING ---
+    if args.image_folder:
+        print(f"Starting Image Processing mode on: {args.image_folder}")
+        abs_folder = os.path.abspath(args.image_folder)
+        photos = []
+        for root, _, files in os.walk(abs_folder):
+            for file in files:
+                extension = file.split(".")[-1]
+                if extension.lower() in ["png", "jpg", "jpeg"]:
+                    photos.append(os.path.join(root, file))
+        if len(photos) == 0:
+            print(f'No photos found {abs_folder}')
+        for photo in photos:
+            process_image(photo, double=True,
+                          output_dir="/mnt/ebs/frames")
+        return
+
+    # --- BRANCH 2: VIDEO PROCESSING ---
     output_folder = os.path.join('/mnt/ebs/', "frames")
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
     video_files = []
-    if args.path:
-        video_files.append(os.path.abspath(args.path))
-    if args.folder:
-        abs_folder = os.path.abspath(args.folder)
+
+    if args.video_file:
+        video_files.append(os.path.abspath(args.video_file))
+
+    elif args.video_folder:
+        abs_folder = os.path.abspath(args.video_folder)
         for root, _, files in os.walk(abs_folder):
             for file in files:
                 if file.lower().endswith(".mp4"):
@@ -115,14 +185,12 @@ def main():
         return
 
     print(f"Distributing {len(video_files)} \
-            videos across {WORKER_COUNT} CPUs...")
+          videos across {WORKER_COUNT} CPUs...")
 
     # --- THE MULTIPROCESSING MAGIC ---
-    worker_func = partial(process_video_worker,
-                          output_folder=output_folder)
+    worker_func = partial(process_video_worker, output_folder=output_folder)
 
     with Pool(processes=WORKER_COUNT) as pool:
-        # 'imap_unordered' for easy balanacing
         for result in pool.imap_unordered(worker_func, video_files):
             print(f"  [+] {result}")
 
