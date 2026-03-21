@@ -2,6 +2,7 @@ import cv2
 import os
 import hashlib
 import argparse
+import random
 from multiprocessing import Pool, cpu_count
 from functools import partial
 from PIL import Image
@@ -144,7 +145,19 @@ def main():
                             help="Path to folder containing \
                                  images for processing.")
 
+    parser.add_argument("-out-dir",
+                        help="Override default output directory \
+                             (/mnt/ebs/frames)")
+    parser.add_argument("-limit", type=int,
+                        help="Limit number of files processed \
+                             (for testing)")
+
     args = parser.parse_args()
+
+    # Decalare output folder
+    output_folder = args.out_dir or "/mnt/ebs/frames"
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
 
     # --- BRANCH 1: IMAGE PROCESSING ---
     if args.image_folder:
@@ -156,18 +169,19 @@ def main():
                 extension = file.split(".")[-1]
                 if extension.lower() in ["png", "jpg", "jpeg"]:
                     photos.append(os.path.join(root, file))
+
+        if args.limit:
+            random.shuffle(photos)
+            photos = photos[:args.limit]
+
         if len(photos) == 0:
             print(f'No photos found {abs_folder}')
         for photo in photos:
             process_image(photo, double=True,
-                          output_dir="/mnt/ebs/frames")
+                          output_dir=output_folder)
         return
 
     # --- BRANCH 2: VIDEO PROCESSING ---
-    output_folder = os.path.join('/mnt/ebs/', "frames")
-    if not os.path.exists(output_folder):
-        os.makedirs(output_folder)
-
     video_files = []
 
     if args.video_file:
@@ -179,6 +193,10 @@ def main():
             for file in files:
                 if file.lower().endswith(".mp4"):
                     video_files.append(os.path.join(root, file))
+
+    if args.limit:
+        random.shuffle(video_files)
+        video_files = video_files[:args.limit]
 
     if not video_files:
         print("No videos found.")
