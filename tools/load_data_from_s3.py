@@ -32,59 +32,44 @@ def main():
         description="Transfer assets between S3 and EBS storage."
     )
 
+    # Create a mutually exclusive group so only one task happens at a time
+    task_group = parser.add_mutually_exclusive_group(required=True)
+
+    task_group.add_argument(
+        "--videos", action="store_true",
+        help="Download video assets"
+    )
+    task_group.add_argument(
+        "--samples", action="store_true",
+        help="Download sample images (to be turned into mosaics)"
+    )
+    task_group.add_argument(
+        "--photos", action="store_true",
+        help="Download tile photos (sources for mosaic tiles)"
+    )
+    task_group.add_argument(
+        "--upload-results", action="store_true",
+        help="Upload local mosaics to S3"
+    )
+
+    # Shared modifiers
     parser.add_argument(
-        # videos to made to tiles
-        "--all-videos",
-        action="store_true",
-        help="Download all objects from the 'lowresvideo' \
-              prefix to /mnt/ebs/raw_vids"
+        "--limit", type=int, default=None,
+        help="Limit the number of files downloaded \
+             (e.g., 15 for videos, 3 for samples, 100 for photos)"
     )
     parser.add_argument(
-        # videos to made to tiles
-        "--some-videos",
-        action="store_true",
-        help="Download random 15 videos from the 'lowresvideo' \
-              prefix to /mnt/ebs/raw_vids"
+        "--out-dir", type=str, default=None,
+        help="Override the default local directory"
     )
     parser.add_argument(
-        # Images to made to mosaics
-        "--all-samples",
-        action="store_true",
-        help="Download .png and .jpeg objects from \
-              'moasic-art-photos' to /mnt/ebs/samples"
-    )
-    parser.add_argument(
-        # Images to made to mosaics
-        "--some-samples",
-        action="store_true",
-        help="Download .png and .jpeg objects from \
-              'moasic-art-photos' to /mnt/ebs/samples"
-    )
-    parser.add_argument(
-        # Images to made to mosaics
-        "--all-photos",
-        action="store_true",
-        help="Download .png and .jpeg objects from \
-              'picsources' to /mnt/ebs/raw_photos"
-    )
-    parser.add_argument(
-        # Images to made to mosaics
-        "--some-photos",
-        action="store_true",
-        help="Download a random 100 .png and .jpeg objects from \
-              'picsources' to /mnt/ebs/raw_photos"
-    )
-    # New flag for uploading results
-    parser.add_argument(
-        "--upload-results",
-        action="store_true",
-        help="Upload all images from /mnt/ebs/mosaics \
-              to the S3 'mosaics' prefix"
+        "--prefix", type=str, default=None,
+        help="Override the default S3 prefix (folder) to pull from"
     )
 
     args = parser.parse_args()
 
-    # Configuration from environment and paths
+    # Configuration
     bucket_name = os.environ.get("S3_STORAGE")
     mount_point = "/mnt/ebs"
 
@@ -93,137 +78,76 @@ def main():
         sys.exit(1)
 
     s3 = S3Access(bucket_name)
+    valid_extensions = ('.png', '.jpeg', '.jpg')
 
-    # --- Logic for Videos (Download) ---
-    if args.all_videos:
-        local_vids_dir = os.path.join(mount_point, "raw_vids")
-        os.makedirs(local_vids_dir, exist_ok=True)
+    # --- Logic Based Assignment for Defaults ---
+    if args.videos:
+        local_dir = args.out_dir or os.path.join(mount_point, "raw_vids")
+        prefix = args.prefix or "lowresvideo"
+        limit = args.limit or (15 if "limit" in sys.argv else None)
+        is_image = False
 
-        print(f"Downloading videos to {local_vids_dir}...")
-        keys = s3.list_sources("lowresvideo")
-        for key in keys:
-            if os.path.basename(key):
-                s3.download_to_disk(
-                    key,
-                    os.path.join(local_vids_dir, os.path.basename(key)))
+    elif args.samples:
+        local_dir = args.out_dir or os.path.join(mount_point, "samples")
+        prefix = args.prefix or "mosaic-art-photos"
+        limit = args.limit or (3 if "limit" in sys.argv else None)
+        is_image = True
 
-    if args.some_videos:
-        """ Grabs a random 15 videos, rather than all" """
-        local_vids_dir = os.path.join(mount_point, "raw_vids")
-        os.makedirs(local_vids_dir, exist_ok=True)
+    elif args.photos:
+        local_dir = args.out_dir or os.path.join(mount_point, "raw_photos")
+        prefix = args.prefix or "picsources"
+        limit = args.limit or (100 if "limit" in sys.argv else None)
+        is_image = True
 
-        print(f"Downloading videos to {local_vids_dir}...")
-        keys = s3.list_sources("lowresvideo")
+    elif args.upload_results:
+        # Upload logic is slightly different
+        local_dir = args.out_dir or os.path.join(mount_point, "mosaics")
+        handle_upload(s3, local_dir, bucket_name)
+        return
+
+    # --- Unified Download Execution ---
+    os.makedirs(local_dir, exist_ok=True)
+    print(f"Syncing S3 '{prefix}' to {local_dir}...")
+
+    keys = s3.list_sources(prefix)
+
+    if limit:
         shuffle(keys)
-        keys = keys[:15]
-        for key in keys:
-            if os.path.basename(key):
-                s3.download_to_disk(
-                    key,
-                    os.path.join(local_vids_dir, os.path.basename(key)))
+        keys = keys[:limit]
 
-    # --- Logic for Photos to be turned to mosaics (Download)
-    if args.all_samples:
-        local_photos_dir = os.path.join(mount_point, "samples")
-        os.makedirs(local_photos_dir, exist_ok=True)
+    for key in keys:
+        filename = os.path.basename(key)
+        if not filename:
+            continue
 
-        print(f"Downloading samples to {local_photos_dir}...")
-        keys = s3.list_sources("mosaic-art-photos")
-        valid_extensions = ('.png', '.jpeg', '.jpg')
+        # Filter for images if applicable
+        if is_image and not key.lower().endswith(valid_extensions):
+            continue
 
-        for key in keys:
-            if key.lower().endswith(valid_extensions):
-                # downloads source files from s3
-                filename = os.path.basename(key)
-                s3.download_to_disk(
-                    key, os.path.join(local_photos_dir, filename))
-                # ensures they are never larger 600 on longer side
-                resize_in_place(os.path.join(local_photos_dir, filename))
+        dest_path = os.path.join(local_dir, filename)
+        s3.download_to_disk(key, dest_path)
 
-    # --- Logic for Photos to be turned to mosaics (Download)
-    if args.some_samples:
-        """ Limits to just three from the 'mosaic-art-photos' """
-        local_photos_dir = os.path.join(mount_point, "samples")
-        os.makedirs(local_photos_dir, exist_ok=True)
+        if is_image:
+            resize_in_place(dest_path)
 
-        print(f"Downloading samples to {local_photos_dir}...")
-        keys = s3.list_sources("mosaic-art-photos")
-        valid_extensions = ('.png', '.jpeg', '.jpg')
-        shuffle(keys)
-        keys = keys[:3]
 
-        for key in keys:
-            if key.lower().endswith(valid_extensions):
-                # downloads source files from s3
-                filename = os.path.basename(key)
-                s3.download_to_disk(
-                    key, os.path.join(local_photos_dir, filename))
-                # ensures they are never larger 600 on longer side
-                resize_in_place(os.path.join(local_photos_dir, filename))
+def handle_upload(s3, local_dir, bucket_name):
+    if not os.path.exists(local_dir):
+        print(f"Skipping upload: {local_dir} does not exist.")
+        return
 
-    # --- Logic for Photos to be used as tiles (Download)
-    if args.all_photos:
-        local_photos_dir = os.path.join(mount_point, "raw_photos")
-        os.makedirs(local_photos_dir, exist_ok=True)
+    valid_images = ('.png', '.jpg', '.jpeg', '.tiff')
+    print(f"Uploading results from {local_dir} to S3 \
+          {bucket_name}/mosaics'...")
 
-        print(f"Downloading tile photos to {local_photos_dir}...")
-        keys = s3.list_sources("picsources")
-        valid_extensions = ('.png', '.jpeg', '.jpg')
+    for filename in os.listdir(local_dir):
+        if filename.lower().endswith(valid_images):
+            s3.upload_from_disk(os.path.join(local_dir, filename),
+                                f"mosaics/{filename}")
 
-        for key in keys:
-            if key.lower().endswith(valid_extensions):
-                # downloads source files from s3
-                filename = os.path.basename(key)
-                s3.download_to_disk(
-                    key, os.path.join(local_photos_dir, filename))
-                # ensures no files are larger 600 on any side.
-                resize_in_place(os.path.join(local_photos_dir, filename))
 
-        # --- Logic for Photos to be turned to mosaics (Download)
-    if args.some_photos:
-        """ Grabs a random 100 photos, rather than all" """
-        local_photos_dir = os.path.join(mount_point, "raw_photos")
-        os.makedirs(local_photos_dir, exist_ok=True)
-
-        print(f"Downloading tile photos to {local_photos_dir}...")
-        keys = s3.list_sources("picsources")
-        shuffle(keys)
-        keys = keys[:100]
-        valid_extensions = ('.png', '.jpeg', '.jpg')
-
-        for key in keys:
-            if key.lower().endswith(valid_extensions):
-                # downloads source files from s3
-                filename = os.path.basename(key)
-                s3.download_to_disk(
-                    key, os.path.join(local_photos_dir, filename))
-                # ensures no files are larger 600 on any side.
-                resize_in_place(os.path.join(local_photos_dir, filename))
-
-    # --- Logic for Results (Upload) ---
-    if args.upload_results:
-        local_mosaics_dir = os.path.join(mount_point, "mosaics")
-
-        if not os.path.exists(local_mosaics_dir):
-            print(f"Skipping upload: {local_mosaics_dir} does not exist.")
-        else:
-            print(f"Uploading mosaic results \
-                    to S3 bucket '{bucket_name}/mosaics'...")
-            valid_images = ('.png', '.jpg', '.jpeg', '.tiff')
-
-            # Loop through the local mosaic directory
-            for filename in os.listdir(local_mosaics_dir):
-                if filename.lower().endswith(valid_images):
-                    local_path = os.path.join(local_mosaics_dir, filename)
-                    # Prepend 'mosaics/' prefix for S3
-                    s3_key = f"mosaics/{filename}"
-
-                    print(f"Uploading {filename}...")
-                    s3.upload_from_disk(local_path, s3_key)
-
-    # Show help if no flags are provided
-    if not (args.all_videos or args.all_photos or args.upload_results):
-        parser.print_help()
+if __name__ == "__main__":
+    main()
 
 
 if __name__ == "__main__":
