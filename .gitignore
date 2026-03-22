@@ -221,3 +221,6 @@ secrets.txt
 test-media/
 test-results/
 logs/
+
+# fiddle and experimentation files
+fiddle/
