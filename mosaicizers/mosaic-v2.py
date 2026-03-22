@@ -1,7 +1,9 @@
 ###############################################
 # This file will create a mosaic from CLI.
-# TODO need to sort out functions here
-# In a new extension of Mosaic.
+# This version use scikit-learn's KDTree for
+# tile matching and multiprocessing for speed.
+# Also optimized memory usage by sharing tile data
+# across workers.
 ###############################################
 
 import os
