@@ -7,7 +7,7 @@
 import os
 import os.path
 import argparse
-from multiprocessing import Process, Queue, cpu_count
+from multiprocessing import Queue, cpu_count, get_context
 
 # These are the custom imports
 from MosaicImage import MosaicImage
@@ -28,6 +28,21 @@ WORKER_COUNT = max(cpu_count() - 1, 1)
 EOQ_VALUE = None
 
 
+_global_fitter = None  # Shared across all workers
+
+
+def worker_init(tile_data, penalty):
+    """This runs ONCE when each worker process starts."""
+    global _global_fitter
+    _global_fitter = TileFitterSciKit(tile_data, penalty=penalty)
+
+
+def worker_task(work_queue, result_queue):
+    """The actual loop the worker runs."""
+    # Use the global fitter already sitting in this process's memory
+    _global_fitter.fit_tiles(work_queue, result_queue)
+
+
 def compose(original_img, tiles, penalty=0.2, suffix=''):
     print('Building mosaic, press Ctrl-C to abort...')
     original_img_large, original_img_small = original_img
@@ -42,12 +57,16 @@ def compose(original_img, tiles, penalty=0.2, suffix=''):
     work_queue = Queue()
     result_queue = Queue()
 
-    # 2. Start the computational WORKERS only
+    # 2a Init the Global Fitter.
+    worker_init(all_tile_data_small, penalty)
+    ctx = get_context('fork')  # from an import at the top
     worker_pool = []
+    # 2b Rally workers.
     for n in range(WORKER_COUNT):
-        fitter = TileFitterSciKit(all_tile_data_small, penalty=penalty)
-        p = Process(target=fitter.fit_tiles, args=(
-            work_queue, result_queue))
+        p = ctx.Process(
+            target=worker_task,
+            args=(work_queue, result_queue)
+        )
         p.start()
         worker_pool.append(p)
 
