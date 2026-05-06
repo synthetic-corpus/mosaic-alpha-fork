@@ -3,6 +3,8 @@ import pickle
 import gzip
 from PIL import Image, ImageOps
 
+from ProcessTimer import ProcessTimer
+
 
 class TileProcessor:
     def __init__(self, tiles_directory,
@@ -96,6 +98,7 @@ class TileProcessor:
                 return data
 
         # search the tiles directory recursively
+        tileTimer = ProcessTimer("Tile Making")
         for root, subFolders, files in os.walk(self.tiles_directory):
             for tile_name in files:
                 tile_path = os.path.join(root, tile_name)
@@ -109,7 +112,7 @@ class TileProcessor:
                     exp_threshold = exp_threshold * 2
 
         print('Processed {} tiles.'.format(len(large_tiles)))
-
+        tileTimer.finish()
         data = (large_tiles, small_tiles)
         self.tiles_save(data)
         return data

@@ -17,6 +17,7 @@ from TargetImage import TargetImage
 from TileProcessor import TileProcessor
 from TileFitterSciKit import TileFitterSciKit
 from ProgressCounter import ProgressCounter
+from ProcessTimer import ProcessTimer
 
 # These are now configed by CLI or class defaults
 TILE_SIZE = 50     # height/width of mosaic tiles in pixels
@@ -118,9 +119,10 @@ def show_error(msg):
 def mosaic(img_path, tiles_data, penalty=0.2, suffix=''):
     """ Takes in Tiles Data as an Agrument now """
     image_data = TargetImage(img_path).get_data()
-    # tiles_data = TileProcessor(tiles_path).get_tiles()
     if tiles_data[0]:
+        imgTimer = ProcessTimer('Single Image ')
         compose(image_data, tiles_data, penalty=penalty, suffix=suffix)
+        imgTimer.finish()
     else:
         show_error("Tiles Data not propery formatted!")
 
@@ -215,5 +217,7 @@ if __name__ == '__main__':
                 continue
             else:
                 # Trigger the mosaic process
+                folderTimer = ProcessTimer('imgs by in folder')
                 mosaic(file_path, tiles_data,
                        penalty=args.penalty, suffix=args.suffix)
+                folderTimer.finish()
