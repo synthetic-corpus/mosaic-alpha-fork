@@ -116,3 +116,10 @@ class TileProcessor:
         data = (large_tiles, small_tiles)
         self.tiles_save(data)
         return data
+
+
+if __name__ == '__main__':
+    # If run, makes cache if none exist
+    tp = TileProcessor('/mnt/ebs/frames')
+    data = tp.get_tiles()
+    print("Tile KDTree is processed and saved as pickle file")
