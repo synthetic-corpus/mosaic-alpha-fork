@@ -3,8 +3,10 @@ import os
 import io
 import hashlib
 import os.path
+import argparse
 from PIL import Image, ImageOps
 from multiprocessing import Process, Queue, cpu_count
+from ProcessTimer import ProcessTimer
 
 # Change these 3 config parameters to suit your needs...
 TILE_SIZE = 50     # height/width of mosaic tiles in pixels
@@ -173,10 +175,10 @@ class MosaicImage:
 
     def save(self):
         """
-        Saves the image_obj as a .jpeg to /mnt/ebs/mosaics
+        Saves the image_obj as a .jpeg to /mnt/ebs/legacy-mosaics
         using its MD5 hash as the filename.
         """
-        output_dir = "/mnt/ebs/mosaics"
+        output_dir = "/mnt/ebs/legacy-mosaics"
 
         # Ensure the output directory exists
         os.makedirs(output_dir, exist_ok=True)
@@ -287,6 +289,7 @@ def mosaic(img_path, tiles_path):
             )
 
 
+"""
 if __name__ == '__main__':
     if len(sys.argv) < 3:
         show_error('Usage: {} <image> <tiles directory>\r'.format(sys.argv[0]))
@@ -299,3 +302,92 @@ if __name__ == '__main__':
             show_error("Unable to find tile directory '{}'".format(tile_dir))
         else:
             mosaic(source_image, tile_dir)
+"""
+
+if __name__ == '__main__':
+    def restricted_float(x):
+        try:
+            x = float(x)
+        except ValueError:
+            raise argparse.ArgumentTypeError(f"{x} is not a \
+                                              floating-point number")
+
+        if x < 0.0 or x > 0.5:
+            raise argparse.ArgumentTypeError(f"{x} is not in range \
+                                             [0.01, 0.5]")
+        return x
+
+    parser = argparse.ArgumentParser(
+        description="Generate a high-quality mosaic.")
+
+    # Create the mutually exclusive group for input
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("-file", "-f", help="Path to the source image file.")
+    group.add_argument("-folder", help="Path to a \
+                       folder of images (not yet implemented).")
+
+    # The tiles directory with a default value
+    parser.add_argument("-tiles", "-t",
+                        default="/mnt/ebs/frames",
+                        help="Path to the directory \
+                              containing tiles (default: /mnt/ebs/frames)")
+
+    parser.add_argument("-out_dir", "-o",
+                        default="/mnt/ebs/mosaics",
+                        help="This is the directory the \
+                              Mosaics will be save to.")
+
+    parser.add_argument('-suffix', '-s',
+                        help="Type something here if \
+                              if you want it appended \
+                              to the file name.")
+
+    parser.add_argument('-penalty',
+                        type=restricted_float,
+                        default=0.2,
+                        help="Set the penalty (range: 0.0 to 0.5, \
+                              default: 0.2) \
+                              High Penalty means less repetition of tiles")
+    args = parser.parse_args()
+
+    # Current logic: Only handle the single file mode
+    if args.file:
+        source_image = os.path.abspath(args.file)
+        tile_dir = os.path.abspath(args.tiles)
+
+        if not os.path.isfile(source_image):
+            show_error(f"Unable to find image file '{source_image}'")
+        elif not os.path.isdir(tile_dir):
+            show_error(f"Unable to find tile directory '{tile_dir}'")
+        else:
+            # Trigger the mosaic process
+            mosaic(source_image, tile_dir)
+
+    elif args.folder:
+        abs_folder = os.path.abspath(args.folder)
+        tile_dir = os.path.abspath(args.tiles)
+        try:
+            samples = [e.path for e in os.scandir(abs_folder)
+                       if e.is_file()]
+        except FileNotFoundError:
+            print(f"Error: Folder '{abs_folder}' not found.")
+            exit(1)
+        try:
+            os.scandir(tile_dir)
+        except Exception:
+            print(f"Error: Tile directory '{tile_dir}' not found.")
+            exit(1)
+        folderTimer = ProcessTimer('imgs by in folder')
+        for file_path in samples:
+            if not os.path.isfile(file_path):
+                show_error(f"Unable to find image file \
+                           '{file_path}'")
+                continue
+            elif not os.path.isdir(tile_dir):
+                show_error(f"Unable to find tile directory \
+                           '{tile_dir}'")
+                continue
+            else:
+                # Trigger the mosaic process
+                mosaic(file_path, tile_dir)
+        folderTimer.finish()

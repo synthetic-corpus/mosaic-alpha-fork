@@ -27,6 +27,21 @@ def resize_in_place(file_path, max_dimension=600):
         return False
 
 
+def handle_upload(s3, local_dir, bucket_name):
+    if not os.path.exists(local_dir):
+        print(f"Skipping upload: {local_dir} does not exist.")
+        return
+
+    valid_images = ('.png', '.jpg', '.jpeg', '.tiff')
+    print(f"Uploading results from {local_dir} to S3 \
+          {bucket_name}/mosaics'...")
+
+    for filename in os.listdir(local_dir):
+        if filename.lower().endswith(valid_images):
+            s3.upload_from_disk(os.path.join(local_dir, filename),
+                                f"mosaics/{filename}")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Transfer assets between S3 and EBS storage."
@@ -129,25 +144,6 @@ def main():
 
         if is_image:
             resize_in_place(dest_path)
-
-
-def handle_upload(s3, local_dir, bucket_name):
-    if not os.path.exists(local_dir):
-        print(f"Skipping upload: {local_dir} does not exist.")
-        return
-
-    valid_images = ('.png', '.jpg', '.jpeg', '.tiff')
-    print(f"Uploading results from {local_dir} to S3 \
-          {bucket_name}/mosaics'...")
-
-    for filename in os.listdir(local_dir):
-        if filename.lower().endswith(valid_images):
-            s3.upload_from_disk(os.path.join(local_dir, filename),
-                                f"mosaics/{filename}")
-
-
-if __name__ == "__main__":
-    main()
 
 
 if __name__ == "__main__":

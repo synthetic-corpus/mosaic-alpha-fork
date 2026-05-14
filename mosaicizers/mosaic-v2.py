@@ -206,6 +206,7 @@ if __name__ == '__main__':
         except Exception as e:
             print(f"Error running TileProcessor class '{tile_dir}': {e}")
             exit(1)
+        folderTimer = ProcessTimer('imgs by in folder')
         for file_path in samples:
             if not os.path.isfile(file_path):
                 show_error(f"Unable to find image file \
@@ -217,7 +218,6 @@ if __name__ == '__main__':
                 continue
             else:
                 # Trigger the mosaic process
-                folderTimer = ProcessTimer('imgs by in folder')
                 mosaic(file_path, tiles_data,
                        penalty=args.penalty, suffix=args.suffix)
-                folderTimer.finish()
+        folderTimer.finish()
