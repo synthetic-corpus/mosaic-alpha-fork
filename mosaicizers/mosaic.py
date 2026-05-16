@@ -178,7 +178,7 @@ class MosaicImage:
         Saves the image_obj as a .jpeg to /mnt/ebs/legacy-mosaics
         using its MD5 hash as the filename.
         """
-        output_dir = "/mnt/ebs/legacy-mosaics"
+        output_dir = "/mnt/ebs/mosaics"
 
         # Ensure the output directory exists
         os.makedirs(output_dir, exist_ok=True)
@@ -191,7 +191,7 @@ class MosaicImage:
 
         md5_hash = hashlib.md5(img_bytes).hexdigest()
 
-        filename = f"{md5_hash}.jpeg"
+        filename = f"{md5_hash}-legacy.jpeg"
         final_path = os.path.join(output_dir, filename)
 
         with open(final_path, "wb") as f:
@@ -279,6 +279,7 @@ def show_error(msg):
 
 
 def mosaic(img_path, tiles_path):
+    mosaicTimer = ProcessTimer(f'Running for: {img_path}')
     image_data = TargetImage(img_path).get_data()
     tiles_data = TileProcessor(tiles_path).get_tiles()
     if tiles_data[0]:
@@ -287,6 +288,7 @@ def mosaic(img_path, tiles_path):
         show_error(
             "No images found in tiles directory '{}'".format(tiles_path)
             )
+    mosaicTimer.finish()
 
 
 """
