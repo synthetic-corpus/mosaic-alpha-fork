@@ -8,9 +8,9 @@ VENV_PYTHON=".venv/bin/python3"
 echo "=== Starting Pipeline at $(date) ===" > pipeline_status.log
 
 # 1. Make the directory that everything saves to and reads from.
-echo "Creating Source directory." >> pipeline_status.log
-mkdir -p /mnt/ebs || { echo "ERROR: Failed to create directory /mnt/ebs" >> pipeline_status.log; exit 1; }
-chmod 777 /mnt/ebs || { echo "ERROR: Failed to 777 /mnt/ebs" >> pipeline_status.log; exit 1; }
+#echo "Creating Source directory." >> pipeline_status.log
+#mkdir -p /mnt/ebs || { echo "ERROR: Failed to create directory /mnt/ebs" >> pipeline_status.log; exit 1; }
+#chmod 777 /mnt/ebs || { echo "ERROR: Failed to 777 /mnt/ebs" >> pipeline_status.log; exit 1; }
 
 # 2. Download Step (Changed second command to >> to append)
 echo "Downloading from videos s3..." >> pipeline_status.log
