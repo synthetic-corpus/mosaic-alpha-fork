@@ -21,7 +21,7 @@ $VENV_PYTHON -u tools/load_data_from_s3.py --samples >> log_0_download.log 2>&1 
 
 # 3. Preprocessing Steps (Sequential - Changed second to >> and fixed error strings)
 echo "Running preprocess step 1 (splicer vids)..." >> pipeline_status.log
-$VENV_PYTHON -u tools/splicer.py -video-folder /mnt/ebs/raw_vids -out-dir /mnt/ebs/raw_photos > log_1_preprocess.log 2>&1 || { echo "ERROR: failed to splice videos" >> log_1_preprocess.log; exit 1; }
+$VENV_PYTHON -u tools/splicer.py -video-folder /mnt/ebs/raw_vids -density 1 -out-dir /mnt/ebs/raw_photos > log_1_preprocess.log 2>&1 || { echo "ERROR: failed to splice videos" >> log_1_preprocess.log; exit 1; }
 
 echo "Running preprocess step 2 (splicer photos)..." >> pipeline_status.log
 $VENV_PYTHON -u tools/splicer.py -image-folder /mnt/ebs/raw_photos >> log_1_preprocess.log 2>&1 || { echo "ERROR: failed to process photos" >> log_1_preprocess.log; exit 1; }

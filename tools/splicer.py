@@ -152,7 +152,7 @@ def main():
     parser.add_argument("-limit", type=int,
                         help="Limit number of files processed \
                              (for testing)")
-    parser.add_argument("-denisty", type=int, default=5,
+    parser.add_argument("-density", type=int, default=5,
                         help="In seconds, frequeence \
                               of frame capture  \
                               (> 60s always 1 second)")
