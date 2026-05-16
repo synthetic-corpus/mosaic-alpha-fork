@@ -39,5 +39,6 @@ $VENV_PYTHON -u mosaicizers/mosaic-v2.py -folder /mnt/ebs/samples -penalty 0.05 
 echo "Running main script v2 with high penalty..." >> pipeline_status.log
 $VENV_PYTHON -u mosaicizers/mosaic-v2.py -folder /mnt/ebs/samples -penalty 0.15 -suffix _p15_v2 > log_3_v2_p15.log 2>&1 || { echo "ERROR: could not run mosaics-v2.py p15" >> log_3_v2_p15.log; exit 1; }
 
-
+echo "Uploading results!" >> pipeline_status.log
+$VENV_PYTHON - u tools/load_data_from_s3 --upload-reulst > log_4_upload.log 2>&1 || { echo "ERROR: could not upload results " >> log_3_v2_p15.log; exit 1; }
 echo "=== Pipeline Finished Successfully at $(date) ===" >> pipeline_status.log
