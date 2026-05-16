@@ -127,7 +127,8 @@ def _save_processed_crop(crop_img, output_dir):
     hash_name = hashlib.md5(resized.tobytes()).hexdigest()
     save_path = os.path.join(output_dir, f"{hash_name}.png")
     resized.save(save_path, "PNG")
-    print(f"  [#] Saved: {hash_name}.png")
+    # way to much logging. Images get into thousands.
+    # print(f"  [#] Saved: {hash_name}.png")
 
 
 def main():
