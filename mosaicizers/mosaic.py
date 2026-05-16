@@ -324,7 +324,7 @@ if __name__ == '__main__':
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("-file", "-f", help="Path to the source image file.")
     group.add_argument("-folder", help="Path to a \
-                       folder of images (not yet implemented).")
+                       folder of images.")
 
     # The tiles directory with a default value
     parser.add_argument("-tiles", "-t",
