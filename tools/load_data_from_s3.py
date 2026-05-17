@@ -93,7 +93,7 @@ def main():
         sys.exit(1)
 
     s3 = S3Access(bucket_name)
-    valid_extensions = ('.png', '.jpeg', '.jpg')
+    valid_extensions = ('.png', '.jpeg', '.jpg', 'webp')
 
     # --- Logic Based Assignment for Defaults ---
     if args.videos:

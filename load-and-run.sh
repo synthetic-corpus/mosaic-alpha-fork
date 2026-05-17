@@ -34,10 +34,13 @@ echo "Running main script v2 with no penalty..." >> pipeline_status.log
 $VENV_PYTHON -u mosaicizers/mosaic-v2.py -folder /mnt/ebs/samples -penalty 0.0 -suffix _p00_v2 > log_3_v2_p00.log 2>&1 || { echo "ERROR: could not run mosaics-v2.py p00" >> log_3_v2_p00.log; exit 1; }
 
 echo "Running main script v2 with low penalty..." >> pipeline_status.log
-$VENV_PYTHON -u mosaicizers/mosaic-v2.py -folder /mnt/ebs/samples -penalty 0.05 -suffix _p05_v2 > log_3_v2_p05.log 2>&1 || { echo "ERROR: could not run mosaics-v2.py p05" >> log_3_v2_p05.log; exit 1; }
+$VENV_PYTHON -u mosaicizers/mosaic-v2.py -folder /mnt/ebs/samples -penalty 0.02 -suffix _p02_v2 > log_3_v2_p02.log 2>&1 || { echo "ERROR: could not run mosaics-v2.py p02" >> log_3_v2_p05.log; exit 1; }
 
 echo "Running main script v2 with high penalty..." >> pipeline_status.log
-$VENV_PYTHON -u mosaicizers/mosaic-v2.py -folder /mnt/ebs/samples -penalty 0.15 -suffix _p15_v2 > log_3_v2_p15.log 2>&1 || { echo "ERROR: could not run mosaics-v2.py p15" >> log_3_v2_p15.log; exit 1; }
+$VENV_PYTHON -u mosaicizers/mosaic-v2.py -folder /mnt/ebs/samples -penalty 0.08 -suffix _p08_v2 > log_3_v2_p08.log 2>&1 || { echo "ERROR: could not run mosaics-v2.py p08" >> log_3_v2_p15.log; exit 1; }
+
+echo "Running No KD version of Sci kit with 00 penalty." >> pipeline_status.log
+$VENV_PYTHON -u mosaicizers/mosaic-nokd.py -folder /mnt/ebs/samples -penalty 0.0 -suffix _p00_v2 > log_3_v2_p08.log 2>&1 || { echo "ERROR: could not run mosaics-v2.py p08" >> log_3_v2_p15.log;}
 
 echo "Uploading results!" >> pipeline_status.log
 $VENV_PYTHON - u tools/load_data_from_s3 --upload-reulst > log_4_upload.log 2>&1 || { echo "ERROR: could not upload results " >> log_3_v2_p15.log; exit 1; }
