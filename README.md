@@ -103,10 +103,10 @@ Maintains the OpenCV processing logic found in v2, but strips away the KD-Tree c
 
 # Final Thoughts
 
-    - Running this workflow in the cloud is highly recommended due to high CPU/RAM utilization, though high-spec local workstations work perfectly as well.
+- Running this workflow in the cloud is highly recommended due to high CPU/RAM utilization, though high-spec local workstations work perfectly as well.
 
-    - Experiment with the -penalty float parameters and alternate script versions to find the structural and visual balance you prefer.
+- Experiment with the -penalty float parameters and alternate script versions to find the structural and visual balance you prefer.
 
-    - When using splicer.py configured to sample one frame per second, an average feature-length film yields roughly 26k–32k tiles.
+- When using splicer.py configured to sample one frame per second, an average feature-length film yields roughly 26k–32k tiles.
 
-    - Scale Warning: The larger your asset library grows, the more memory the program requires to map out the lookup array or KD-Tree structures.
+- Scale Warning: The larger your asset library grows, the more memory the program requires to map out the lookup array or KD-Tree structures.
