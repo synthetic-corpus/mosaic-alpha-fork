@@ -15,7 +15,7 @@ from multiprocessing import Queue, cpu_count, get_context
 from MosaicImage import MosaicImage
 from TargetImage import TargetImage
 from TileProcessor import TileProcessor
-from TileFitterSciKit import TileFitterSciKit
+from TileFitterSciKitNoKD import TileFitterSciKit
 from ProgressCounter import ProgressCounter
 from ProcessTimer import ProcessTimer
 

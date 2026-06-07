@@ -45,7 +45,7 @@ def resize_maintain_aspect(frame, short_side_target=200):
     return cv2.resize(frame, new_dim, interpolation=cv2.INTER_AREA)
 
 
-def process_video_worker(absolute_video_path, output_folder):
+def process_video_worker(absolute_video_path, output_folder, density=5):
     """The function each CPU core will run."""
     if not is_video_readable(absolute_video_path):
         return f"Error: {os.path.basename(absolute_video_path)}\
@@ -62,7 +62,7 @@ def process_video_worker(absolute_video_path, output_folder):
         return f"Bad FPS: {os.path.basename(absolute_video_path)}"
 
     duration_seconds = total_frames / fps
-    interval_seconds = 1 if duration_seconds < 60 else 5
+    interval_seconds = 1 if duration_seconds < 60 else density
     capture_step = int(fps * interval_seconds)
 
     file_hash = get_file_md5(absolute_video_path)
@@ -127,7 +127,8 @@ def _save_processed_crop(crop_img, output_dir):
     hash_name = hashlib.md5(resized.tobytes()).hexdigest()
     save_path = os.path.join(output_dir, f"{hash_name}.png")
     resized.save(save_path, "PNG")
-    print(f"  [#] Saved: {hash_name}.png")
+    # way to much logging. Images get into thousands.
+    # print(f"  [#] Saved: {hash_name}.png")
 
 
 def main():
@@ -151,11 +152,16 @@ def main():
     parser.add_argument("-limit", type=int,
                         help="Limit number of files processed \
                              (for testing)")
+    parser.add_argument("-density", type=int, default=5,
+                        help="In seconds, frequeence \
+                              of frame capture  \
+                              (> 60s always 1 second)")
 
     args = parser.parse_args()
 
     # Decalare output folder
     output_folder = args.out_dir or "/mnt/ebs/frames"
+    density = args.density
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
@@ -206,7 +212,9 @@ def main():
           videos across {WORKER_COUNT} CPUs...")
 
     # --- THE MULTIPROCESSING MAGIC ---
-    worker_func = partial(process_video_worker, output_folder=output_folder)
+    worker_func = partial(process_video_worker,
+                          output_folder=output_folder,
+                          density=density)
 
     with Pool(processes=WORKER_COUNT) as pool:
         for result in pool.imap_unordered(worker_func, video_files):
