@@ -24,8 +24,9 @@ class MosaicImage:
         """
         Saves the image as a .jpeg.
 
-        When filename is None, the file is named with the image's MD5
-        hash plus suffix. Otherwise it is named filename plus suffix.
+        When self.file_name is empty, the file is named with the image's
+        MD5 hash plus suffix. Otherwise it is named self.file_name plus
+        suffix. A filename argument overrides self.file_name.
         """
 
         # Ensure the output directory exists
@@ -36,7 +37,9 @@ class MosaicImage:
         self.image.save(img_byte_arr, format='JPEG')
         img_bytes = img_byte_arr.getvalue()
 
-        if not self.file_name:
+        if filename is None:
+            filename = self.file_name
+        if not filename:
             md5_hash = hashlib.md5(img_bytes).hexdigest()
             out_name = f"{md5_hash}{suffix}.jpeg"
         else:
