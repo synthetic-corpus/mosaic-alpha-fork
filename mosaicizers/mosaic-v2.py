@@ -126,7 +126,7 @@ def mosaic(img_path, tiles_data, penalty=0.2, suffix=''):
                 file_name=file_name)
         imgTimer.finish()
     else:
-        show_error("Tiles Data not propery formatted!")
+        show_error("Tiles Data not properly formatted!")
 
 
 if __name__ == '__main__':
