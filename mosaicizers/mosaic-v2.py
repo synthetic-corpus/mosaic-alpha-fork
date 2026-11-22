@@ -46,13 +46,13 @@ def worker_task(work_queue, result_queue):
     _global_fitter.fit_tiles(work_queue, result_queue)
 
 
-def compose(original_img, tiles, penalty=0.2, suffix=''):
+def compose(original_img, tiles, penalty=0.2, suffix='', file_name=''):
     print('Building mosaic, press Ctrl-C to abort...')
     original_img_large, original_img_small = original_img
     tiles_large, tiles_small = tiles
 
     # 1. Initialize our mosaic object
-    mosaic = MosaicImage(original_img_large)
+    mosaic = MosaicImage(original_img_large, file_name=file_name)
 
     all_tile_data_large = [list(tile.getdata()) for tile in tiles_large]
     all_tile_data_small = [list(tile.getdata()) for tile in tiles_small]
@@ -119,9 +119,11 @@ def show_error(msg):
 def mosaic(img_path, tiles_data, penalty=0.2, suffix=''):
     """ Takes in Tiles Data as an Agrument now """
     image_data = TargetImage(img_path).get_data()
+    file_name = os.path.splitext(os.path.basename(img_path))[0]
     if tiles_data[0]:
         imgTimer = ProcessTimer('Single Image ')
-        compose(image_data, tiles_data, penalty=penalty, suffix=suffix)
+        compose(image_data, tiles_data, penalty=penalty, suffix=suffix,
+                file_name=file_name)
         imgTimer.finish()
     else:
         show_error("Tiles Data not propery formatted!")
