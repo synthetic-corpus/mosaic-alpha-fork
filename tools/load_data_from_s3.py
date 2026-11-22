@@ -97,18 +97,21 @@ def main():
 
     # --- Logic Based Assignment for Defaults ---
     if args.videos:
+        """ Videos to become Mosaic Tiles. """
         local_dir = args.out_dir or os.path.join(mount_point, "raw_vids")
         prefix = args.prefix or "lowresvideo"
         limit = args.limit or (15 if "limit" in sys.argv else None)
         is_image = False
 
     elif args.samples:
+        """ Images to become Mosaic Tiles. """
         local_dir = args.out_dir or os.path.join(mount_point, "samples")
-        prefix = args.prefix or "mosaic-art-photos"
+        prefix = args.prefix or "sample-images"
         limit = args.limit or (3 if "limit" in sys.argv else None)
         is_image = True
 
     elif args.photos:
+        """ Images to become Mosaic Tiles. """
         local_dir = args.out_dir or os.path.join(mount_point, "raw_photos")
         prefix = args.prefix or "picsources"
         limit = args.limit or (100 if "limit" in sys.argv else None)
