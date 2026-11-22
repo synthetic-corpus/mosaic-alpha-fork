@@ -99,7 +99,7 @@ def main():
     if args.videos:
         """ Videos to become Mosaic Tiles. """
         local_dir = args.out_dir or os.path.join(mount_point, "raw_vids")
-        prefix = args.prefix or "lowresvideo"
+        prefix = args.prefix or "venus-videos"
         limit = args.limit or (15 if "limit" in sys.argv else None)
         is_image = False
 
