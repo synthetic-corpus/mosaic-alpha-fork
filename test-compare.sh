@@ -38,4 +38,7 @@ $VENV_PYTHON -u mosaicizers/mosaic-v2.py -folder /mnt/ebs/samples -penalty 0.0 -
 echo "Running mosaic-v2.py with penalty 0.03..." >> pipeline_status.log
 $VENV_PYTHON -u mosaicizers/mosaic-v2.py -folder /mnt/ebs/samples -penalty 0.03 -suffix _d800_p3_v2 > log_3_v2_p3.log 2>&1 || { echo "ERROR: could not run mosaic-v2.py p3" >> log_3_v2_p3.log; exit 1; }
 
+
+echo "Uploading results!" >> pipeline_status.log
+$VENV_PYTHON - u tools/load_data_from_s3 --upload-results > log_4_upload.log 2>&1 || { echo "ERROR: could not upload results " >> pipeline_status.log; exit 1; }
 echo "=== Test Compare Finished Successfully at $(date) ===" >> pipeline_status.log
