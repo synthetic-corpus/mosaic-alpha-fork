@@ -52,7 +52,7 @@ class TileFitterSciKit:
 
         # Step 1: KDTree Pruning (The "Bucket" step)
         target_avg = target_np.mean(axis=(0, 1))
-        _, indices = self.tree.query(target_avg, k=200)
+        _, indices = self.tree.query(target_avg, k=800)
 
         best_raw_score = float('-inf')
         best_score = -1
